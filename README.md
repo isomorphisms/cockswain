@@ -55,20 +55,67 @@ The value is always `high`.
 COCKSWAIN_MODEL='openai/gpt-oss-20b' \
 COCKSWAIN_BASE_URL='http://127.0.0.1:8000/v1' \
 COCKSWAIN_SEND_REASONING_EFFORT=1 \
-bin/cockswain-eval
+bin/cockswain-eval tests/cases
 ```
 
-The report calls out false `DONE` and false `HUMAN` separately.
+The report calls out false `DONE` and false `HUMAN` separately. Set `COCKSWAIN_HISTORY_MODE=without` to run the same cases after replacing only `chat_history` with an empty array in a temporary copy.
 
-## Chat history
+## Recent private history
 
-A ChatGPT data export can be normalized locally without committing it:
+Normalize a ChatGPT export locally:
 
 ```sh
 mkdir -p .private
 bin/import-chatgpt-export ~/Downloads/conversations.json > .private/chat-history.json
 ```
 
-The importer follows each exported conversation's active/current branch when that information is present and preserves message ids and parent ids. See `docs/chat-history.md`.
+List the most recently updated active branches without creating repository files:
 
-Private or personal chat history must never be committed to this public repository.
+```sh
+sh bin/cockswain-recent-cases list .private/chat-history.json 25
+```
+
+Create `.private/recent-cases.json` with independently labeled work-state metadata. The transcript is joined by `conversation_id`; it is not used to invent objective state or the expected action:
+
+```json
+{
+  "cases": [
+    {
+      "conversation_id": "CONVERSATION_ID_FROM_LIST",
+      "case_id": "short-local-case-id",
+      "expected_action": "CONTINUE",
+      "goal": "The goal being supervised.",
+      "state": {"objective": "current independently checked state"},
+      "unresolved": ["What remains."],
+      "done_when": ["Concrete completion condition."]
+    }
+  ]
+}
+```
+
+Build private evaluation work items with the latest 12 active-branch messages by default:
+
+```sh
+sh bin/cockswain-recent-cases build \
+  .private/chat-history.json \
+  .private/recent-cases.json \
+  .private/cases/recent
+```
+
+Set `COCKSWAIN_HISTORY_MESSAGES` to change the default window, or set `history_messages` on an individual case. Generated history-bearing cases inside this checkout are refused unless the output directory is under `.private/`.
+
+## Model matrix and history ablation
+
+With an OpenAI-compatible local endpoint able to serve the model ids in `models/models.json`:
+
+```sh
+COCKSWAIN_BASE_URL='http://127.0.0.1:8000/v1' \
+COCKSWAIN_RUN_ID='recent-history-1' \
+sh bin/cockswain-eval-matrix .private/cases/recent
+```
+
+Each model is run twice: once with the private recent history and once with history removed. Per-run logs, `summary.tsv`, and `history-ablation.tsv` stay under ignored `eval/results/` by default.
+
+The importer follows each exported conversation's active/current branch when that information is present and preserves message ids and parent ids. See `docs/chat-history.md` and `docs/model-evaluation.md`.
+
+Private or personal chat history, case specs, generated cases, and evaluation logs must never be committed to this public repository.
