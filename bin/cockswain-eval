@@ -42,7 +42,7 @@ for case_file in "$case_dir"/*.json; do
     effective_case=$case_file
     if [ "$history_mode" = without ]; then
         case_tmp=$(mktemp)
-        jq '.chat_history = []' "$case_file" > "$case_tmp"
+        jq '.chat_history = [] | del(.source.history)' "$case_file" > "$case_tmp"
         effective_case=$case_tmp
     fi
 
