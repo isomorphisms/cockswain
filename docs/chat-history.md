@@ -25,7 +25,7 @@ For each conversation it:
 - follows parent links back to the root so alternate abandoned branches are not mixed into the active transcript;
 - preserves each selected message's node id, parent id, role, time, and text.
 
-This is intentionally local processing. Exported chat data can contain personal information and must not be committed to this public repository.
+This is intentionally local processing. Exported chat data can contain personal information and must not be committed to this public repository. Set a restrictive local umask (for example `umask 077`) before redirecting normalized output to `.private/`.
 
 ## Recent-history evaluation cases
 
