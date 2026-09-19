@@ -65,6 +65,7 @@ The report calls out false `DONE` and false `HUMAN` separately. Set `COCKSWAIN_H
 Normalize a ChatGPT export locally:
 
 ```sh
+umask 077
 mkdir -p .private
 bin/import-chatgpt-export ~/Downloads/conversations.json > .private/chat-history.json
 ```
