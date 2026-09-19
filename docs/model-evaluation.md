@@ -36,7 +36,7 @@ These results are ignored because real-history case ids and local serving diagno
 Every real evaluation case is run twice:
 
 - with its recent/normalized chat history;
-- with `chat_history` replaced by an empty array in a temporary copy.
+- with `chat_history` emptied and transcript-derived `source.history` metadata removed in a temporary copy.
 
 The original case is never rewritten. This measures whether history improves triage rather than merely adding tokens.
 
