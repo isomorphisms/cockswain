@@ -1,0 +1,60 @@
+#!/bin/sh
+set -eu
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
+case_dir=${1:-"$repo_dir/tests/cases"}
+
+total=0
+correct=0
+false_done=0
+false_human=0
+invalid=0
+
+printf 'case\texpected\tactual\tresult\n'
+
+for case_file in "$case_dir"/*.json; do
+    [ -e "$case_file" ] || continue
+
+    total=$((total + 1))
+    case_id=$(jq -r '.case_id // input_filename' "$case_file")
+    expected=$(jq -r '.expected_action' "$case_file")
+
+    tmp=$(mktemp)
+    trap 'rm -f "$tmp"' EXIT HUP INT TERM
+
+    if "$script_dir/cockswain-supervise" "$case_file" >"$tmp"; then
+        actual=$(jq -r '.action // "INVALID"' "$tmp" 2>/dev/null || printf 'INVALID')
+    else
+        actual=INVALID
+    fi
+
+    result=FAIL
+    if [ "$actual" = "$expected" ]; then
+        correct=$((correct + 1))
+        result=PASS
+    fi
+
+    if [ "$actual" = DONE ] && [ "$expected" != DONE ]; then
+        false_done=$((false_done + 1))
+    fi
+    if [ "$actual" = HUMAN ] && [ "$expected" != HUMAN ]; then
+        false_human=$((false_human + 1))
+    fi
+    if [ "$actual" = INVALID ]; then
+        invalid=$((invalid + 1))
+    fi
+
+    printf '%s\t%s\t%s\t%s\n' "$case_id" "$expected" "$actual" "$result"
+    rm -f "$tmp"
+    trap - EXIT HUP INT TERM
+done
+
+printf '\n'
+printf 'total\t%d\n' "$total"
+printf 'correct\t%d\n' "$correct"
+printf 'false_done\t%d\n' "$false_done"
+printf 'false_human\t%d\n' "$false_human"
+printf 'invalid_output\t%d\n' "$invalid"
+
+[ "$false_done" -eq 0 ] && [ "$false_human" -eq 0 ] && [ "$invalid" -eq 0 ]

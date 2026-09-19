@@ -1,0 +1,69 @@
+#!/bin/sh
+set -eu
+
+if [ "$#" -ne 1 ]; then
+    printf 'usage: %s conversations.json\n' "$0" >&2
+    exit 64
+fi
+
+input=$1
+
+command -v jq >/dev/null 2>&1 || {
+    printf 'cockswain: jq is required\n' >&2
+    exit 69
+}
+
+jq '
+def text_content:
+  (.content.parts // [])
+  | map(select(type == "string"))
+  | join("\n");
+
+def path_to_root($mapping; $id):
+  if $id == null or ($mapping[$id] == null) then
+    []
+  else
+    (path_to_root($mapping; $mapping[$id].parent) + [$id])
+  end;
+
+map(
+  . as $conversation
+  | (.mapping // {}) as $mapping
+  | (
+      $conversation.current_node
+      // (
+        [
+          $mapping
+          | to_entries[]
+          | select(.value.message != null)
+          | {
+              id: .key,
+              time: (.value.message.create_time // 0)
+            }
+        ]
+        | if length == 0 then null else max_by(.time).id end
+      )
+    ) as $leaf
+  | {
+      id: ($conversation.id // $conversation.conversation_id // null),
+      title: ($conversation.title // ""),
+      create_time: ($conversation.create_time // null),
+      update_time: ($conversation.update_time // null),
+      active_leaf: $leaf,
+      chat_history: [
+        path_to_root($mapping; $leaf)[] as $node_id
+        | $mapping[$node_id] as $node
+        | $node.message
+        | select(. != null)
+        | {
+            node_id: $node_id,
+            parent_id: ($node.parent // null),
+            role: (.author.role // "unknown"),
+            time: (.create_time // null),
+            content: text_content
+          }
+        | select(.content != "")
+      ]
+    }
+)
+' "$input"

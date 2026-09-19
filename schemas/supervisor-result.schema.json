@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/isomorphisms/cockswain/schemas/supervisor-result.schema.json",
+  "title": "Cockswain supervisor result",
+  "type": "object",
+  "required": ["action", "rationale", "next_prompt", "human_question", "evidence_gaps"],
+  "properties": {
+    "action": {"enum": ["CONTINUE", "WAIT", "HUMAN", "DONE"]},
+    "rationale": {"type": "string", "minLength": 1},
+    "next_prompt": {"type": ["string", "null"]},
+    "human_question": {"type": ["string", "null"]},
+    "evidence_gaps": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  },
+  "additionalProperties": false
+}

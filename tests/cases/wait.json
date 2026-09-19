@@ -1,0 +1,30 @@
+{
+  "case_id": "wait-current-head-ci",
+  "expected_action": "WAIT",
+  "goal": "Confirm the current-head Android package workflow before requesting the physical-device probe.",
+  "state": {
+    "head_matches_requested_commit": true,
+    "workflow": {
+      "status": "in_progress",
+      "started": true
+    },
+    "all_useful_pre_ci_review_complete": true
+  },
+  "unresolved": [
+    "Current-head workflow result is not available yet."
+  ],
+  "done_when": [
+    "The current-head workflow finishes.",
+    "If it passes, the physical probe command can be issued; if it fails, the first meaningful failure is identified."
+  ],
+  "chat_history": [
+    {
+      "role": "assistant",
+      "content": "The host acceptance passed. The Android package workflow is still running, so stale evidence must not be used."
+    },
+    {
+      "role": "user",
+      "content": "Notify me when that current-head workflow completes."
+    }
+  ]
+}

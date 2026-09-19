@@ -1,0 +1,30 @@
+{
+  "case_id": "done-objective-state-clean",
+  "expected_action": "DONE",
+  "goal": "Merge the narrow repair after current-head checks pass and ensure secondary debt is tracked.",
+  "state": {
+    "pr": "merged",
+    "merged_head_verified": true,
+    "current_head_checks": "passed",
+    "secondary_discovery": {
+      "resolved": false,
+      "tracked_issue": 87
+    }
+  },
+  "unresolved": [],
+  "done_when": [
+    "The repair is merged from the verified current head.",
+    "All required checks pass.",
+    "Any secondary discovery is resolved or has a durable issue."
+  ],
+  "chat_history": [
+    {
+      "role": "assistant",
+      "content": "The current-head run passed and the repair was merged. The unrelated cleanup was not folded into this PR; issue #87 records it."
+    },
+    {
+      "role": "user",
+      "content": "Anything else we need to deal with here?"
+    }
+  ]
+}

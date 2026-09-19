@@ -1,0 +1,32 @@
+{
+  "models": [
+    {
+      "id": "openai/gpt-oss-20b",
+      "license": "Apache-2.0",
+      "reasoning": "explicit-high",
+      "send_reasoning_effort": true,
+      "role": "primary high-reasoning candidate"
+    },
+    {
+      "id": "Qwen/Qwen3-4B-Instruct-2507",
+      "license": "Apache-2.0",
+      "reasoning": "deepest-available-by-prompt",
+      "send_reasoning_effort": false,
+      "role": "small baseline"
+    },
+    {
+      "id": "mistralai/Ministral-3-8B-Instruct-2512",
+      "license": "Apache-2.0",
+      "reasoning": "deepest-available-by-prompt",
+      "send_reasoning_effort": false,
+      "role": "mid-size edge candidate"
+    },
+    {
+      "id": "microsoft/Phi-4-reasoning-plus",
+      "license": "MIT",
+      "reasoning": "reasoning-model-deepest-available",
+      "send_reasoning_effort": false,
+      "role": "reasoning-specialized comparison"
+    }
+  ]
+}
