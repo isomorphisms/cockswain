@@ -4,6 +4,15 @@ set -eu
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repo_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
 case_dir=${1:-"$repo_dir/tests/cases"}
+history_mode=${COCKSWAIN_HISTORY_MODE:-with}
+
+case "$history_mode" in
+    with|without) ;;
+    *)
+        printf 'cockswain: COCKSWAIN_HISTORY_MODE must be with or without\n' >&2
+        exit 64
+        ;;
+esac
 
 total=0
 correct=0
@@ -20,11 +29,25 @@ for case_file in "$case_dir"/*.json; do
     case_id=$(jq -r '.case_id // input_filename' "$case_file")
     expected=$(jq -r '.expected_action' "$case_file")
 
-    tmp=$(mktemp)
-    trap 'rm -f "$tmp"' EXIT HUP INT TERM
+    result_tmp=$(mktemp)
+    case_tmp=
+    cleanup() {
+        rm -f "$result_tmp"
+        if [ -n "$case_tmp" ]; then
+            rm -f "$case_tmp"
+        fi
+    }
+    trap cleanup EXIT HUP INT TERM
 
-    if "$script_dir/cockswain-supervise" "$case_file" >"$tmp"; then
-        actual=$(jq -r '.action // "INVALID"' "$tmp" 2>/dev/null || printf 'INVALID')
+    effective_case=$case_file
+    if [ "$history_mode" = without ]; then
+        case_tmp=$(mktemp)
+        jq '.chat_history = []' "$case_file" > "$case_tmp"
+        effective_case=$case_tmp
+    fi
+
+    if "$script_dir/cockswain-supervise" "$effective_case" >"$result_tmp"; then
+        actual=$(jq -r '.action // "INVALID"' "$result_tmp" 2>/dev/null || printf 'INVALID')
     else
         actual=INVALID
     fi
@@ -46,11 +69,15 @@ for case_file in "$case_dir"/*.json; do
     fi
 
     printf '%s\t%s\t%s\t%s\n' "$case_id" "$expected" "$actual" "$result"
-    rm -f "$tmp"
+    rm -f "$result_tmp"
+    if [ -n "$case_tmp" ]; then
+        rm -f "$case_tmp"
+    fi
     trap - EXIT HUP INT TERM
 done
 
 printf '\n'
+printf 'history_mode\t%s\n' "$history_mode"
 printf 'total\t%d\n' "$total"
 printf 'correct\t%d\n' "$correct"
 printf 'false_done\t%d\n' "$false_done"
