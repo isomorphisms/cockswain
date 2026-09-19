@@ -1,0 +1,327 @@
+record: 001
+date: 2026-09-16
+topic: Census geography research
+source_record: 2026-09-16-census-geography-project
+role: user
+---
+All right I talked about having 1% in case in 1% with some kind of geography let's try to actually try to do this 
+
+Start with a census designated places where you have median home value like by ZIP code or census tract or whatever
+===
+
+record: 002
+date: 2026-09-14
+topic: Wegert user feedback interpretation
+source_record: 2026-09-14-wegert-human-reaction-priority
+role: user
+---
+No I think the human reaction is more important than the device
+===
+
+record: 003
+date: 2026-09-17
+topic: thread closeout
+source_record: 2026-09-17-catfood-close-check
+role: user
+---
+Can I close this
+===
+
+record: 004
+date: 2026-09-18
+topic: continue autonomous repair
+source_record: 2026-09-18-ib-dont-give-up
+role: user
+---
+Okay don't give up please
+===
+
+record: 005
+date: 2026-09-18
+topic: human-loop threshold
+source_record: 2026-09-18-autonomous-repair
+role: user
+---
+Do you think you can repair them without further intervention from me
+===
+
+record: 006
+date: 2026-09-18
+topic: durable follow-up
+source_record: 2026-09-18-unresolved-work-trackers
+role: user
+---
+Make an issue for anything we noticed here that has not been resolved
+===
+
+record: 007
+date: 2026-09-18
+topic: thread cleanup
+source_record: 2026-09-18-cleanup-pass
+role: user
+---
+Anything else we need to clean up here
+===
+
+record: 008
+date: 2026-09-18
+topic: stale merged work not on main
+source_record: 2026-09-18-shader-closeout
+role: user
+---
+All right anything else we need to do on this thread
+===
+
+record: 009
+date: 2026-09-18
+topic: fix and prevent recurrence
+source_record: 2026-09-18-tablet-regression-prevention
+role: user
+---
+All right I need you to fix these problems and don't just fix them make sure they won't happen again make notes in the agent's markdown take a memory I don't know what you need to do I'm telling you s*** many many times
+===
+
+record: 010
+date: 2026-09-18
+topic: exact-head workflow integrity
+source_record: 2026-09-18-pr130-integrity
+role: user
+---
+isomorphisms/ai-ci PR #130, “Reject synthetic PR checkout in workflow integrity,” is open, cleanly mergeable, and all eight current-head workflows pass. It adds a reusable check that primary PR checkouts use the explicit PR-head ref while keeping dependency checkouts separate, and narrows the shell-OR detector so GitHub expressions containing `||` are not false positives. Scrutinize the parser and fixtures for loopholes or overreach, then merge it if sound.
+===
+
+record: 011
+date: 2026-09-18
+topic: evidence boundary
+source_record: 2026-09-18-cloud-storage-evidence-boundary
+role: user
+---
+isomorphisms/cloud-storage-api PR #9, “Add ZIP64 ranged inventory,” is still draft and mergeable, but both current-head workflows now pass. Its own stated draft condition was to keep it draft until the ZIP/ZIP64 range workflow and Drive contract were green. Help me review the ZIP64 EOCD/locator and 0x0001 extra-field handling, preserve the stage 1/2 evidence boundary without claiming authenticated Drive extraction, and promote and merge it if the implementation is clean.
+===
+
+record: 012
+date: 2026-09-18
+topic: acceptance boundary
+source_record: 2026-09-18-dex-physical-boundary
+role: user
+---
+isomorphisms/idric-arm-thumb PR #60, “DEX: add checked Text ABI for ICU command path,” and stacked PR #61, “DEX: lower checked String equality for ICU command words,” are both draft, mergeable, and their current-head workflows pass. Review the narrow direct-DEX boundaries and, if clean, promote and merge them in dependency order without claiming emulator or physical-device acceptance.
+===
+
+record: 013
+date: 2026-09-19
+topic: Cockswain purpose
+source_record: 2026-09-19-cockswain-core-loop
+role: user
+---
+Right but number one I've already been talking about storing local copies or GitHub copies especially of the non-personal stuff
+
+Number two if I hook it up to GitHub even if it didn't have the conversations surely it can just say hey was this issue resolved keep going
+===
+
+record: 014
+date: 2026-09-19
+topic: model role
+source_record: 2026-09-19-human-loop-detector
+role: user
+---
+Okay so is there any open model on hugging face that would be good to use for this again like not super stupid but definitely not need to be a full problem solver more just avoid as long as it's good enough at identifying when I need to actually enter the loop I mean even if it just was a Cron job that would just ask you know how's it going have you finished this is everything clean do you think this needs a game in the loop a human in the loop
+===
+
+record: 015
+date: 2026-09-19
+topic: supervisor configuration
+source_record: 2026-09-19-reasoning-budget
+role: user
+---
+No always high I don't care about speed
+===
+
+record: 016
+date: 2026-09-17
+topic: Grease closeout
+source_record: 2026-09-17-grease-merge-and-tidy
+role: user
+---
+Okay can we merge and tidy up
+===
+
+record: 017
+date: 2026-09-18
+topic: AZ YSH runtime
+source_record: 2026-09-18-az-issue11-runtime-repair
+role: user
+---
+isomorphisms/az issue #11 was opened today after physical phone acceptance showed that the declared Cat Food `az-phone` artifact cannot run under the delivered YSH/Oils 0.37.0 defaults: `ysh bin/az doctor` fails immediately under `strict_errexit`. Help me make the narrow source-level repair, add regression coverage against the current YSH runtime, and determine what Cat Food package identity needs updating once the exact artifact is green.
+===
+
+record: 018
+date: 2026-09-18
+topic: Cat Food checkout discovery
+source_record: 2026-09-18-catfood65-checkout-tracking
+role: user
+---
+isomorphisms/catfood issue #65 was opened today because `catfood where` still derives one canonical workbench path and cannot report valid noncanonical or multiple working copies. Help me implement the stronger contract so Cat Food can authoritatively report verified local checkout locations and their roles on each device without guessing from directory names.
+===
+
+record: 019
+date: 2026-09-18
+topic: Oils Soil acceptance
+source_record: 2026-09-18-oils-pr4-publisher-independent
+role: user
+---
+isomorphisms/oils PR #4, “Use ai-ci for publisher-independent Soil acceptance,” is open, non-draft, mergeable, and its strict current-head run 26 now passes. Every recorded Soil task returns zero with no allowed-task-failure exceptions, including the previously failing dev-minimal, other-tests, and ovm-tarball paths. Review whether the repairs remain narrowly scoped to publisher-independent Soil acceptance and merge it if clean.
+===
+
+record: 020
+date: 2026-09-18
+topic: Oils thread closeout
+source_record: 2026-09-18-oils-thread-close
+role: user
+---
+All right anything else I need to do on this thread
+===
+
+record: 021
+date: 2026-09-18
+topic: Grease workflow monitoring
+source_record: 2026-09-18-grease34-wait-current-head
+role: user
+---
+Watch isomorphisms/grease PR #34, “ish: allocate backing storage without visible growth.” Its current-head Ish host acceptance has passed and the Ish Android packages workflow is still running. Notify me when that current-head workflow completes; if it passes, give me the exact Termux command for the required physical ARMv7 SD-card/FAT allocation probe, and if it fails summarize the first meaningful failure. Also notify me if the PR head changes before completion so stale evidence is not used.
+===
+
+record: 022
+date: 2026-09-18
+topic: Ithon migration
+source_record: 2026-09-18-ai-ci134-ithon-migration
+role: user
+---
+isomorphisms/ai-ci PR #134, “Require Ithon instead of Python for first-party source,” is non-draft and all eight current-head workflows pass, but GitHub currently reports it non-mergeable. Reconcile it onto current main while preserving the fail-closed Ithon rule and the explicitly tracked existing Python migration debts, then merge it if the resulting diff remains narrow.
+===
+
+record: 023
+date: 2026-09-18
+topic: Android GLES branch reconciliation
+source_record: 2026-09-18-idris-shader45-reconcile-main
+role: user
+---
+isomorphisms/idris-shader-backend issue #45 was opened today because PR #44, “Accept the physical Mali-G57 tablet renderer,” merged into `target/powervr-ge8322-gles` rather than `main`, and the two histories have since diverged. Help me reconcile the still-live Android GLES work onto current main while preserving the separate PowerVR phone and Mali-G57 tablet gates, regression cases, physical-device evidence boundaries, and runtime-only Android model.
+===
+
+record: 024
+date: 2026-09-18
+topic: IB PR #44
+source_record: 2026-09-18-ib44-safe-merge
+role: user
+---
+Can we merge now safely
+===
+
+record: 025
+date: 2026-09-18
+topic: IB/ai-ci process repair
+source_record: 2026-09-18-ib44-process-lessons
+role: user
+---
+Well boy does this uncover any errors in aici or an agent's markdown file that need to be corrected
+===
+
+record: 026
+date: 2026-09-18
+topic: Cat Food thread closeout
+source_record: 2026-09-18-catfood-close-or-issue
+role: user
+---
+If this is not essentially working in the way that I want it to please make a issue
+===
+
+record: 027
+date: 2026-09-18
+topic: Cat Food closure question
+source_record: 2026-09-18-catfood-can-close
+role: user
+---
+Okay so can I close this
+===
+
+record: 028
+date: 2026-09-18
+topic: EDGAR data-format follower corpus
+source_record: 2026-09-18-data-format-followers
+role: user
+---
+Sorry I knew there wasn't any what I was trying to say was can you go fetch a couple different samples of each type and put it in the appropriate repository I think for right now any exotic data format would go in the Edgar repository and just make a separate Branch for each data format and what I want you to do obviously is on each of those branches of for right now Edgar even if it's satellite data or crime data on each of those branches describe the data format list what's available kind of like we did with isas just try to make a plain text list of everything that's available mirror any documentation that is mirrorable or link to documentation if it cannot be married mirrored and then try to grab a couple samples on on the appropriate Branch for each branch I want you to grab samples of you know not just simple but potentially some complex ones because right we might be trying to parse a more complex data format and I'm just interested in in having a lot of followers so I can watch what happens to interesting cases and just while I'm building this arm thumb back in just see if anything interesting happens to anything I can relate to the real world
+===
+
+record: 029
+date: 2026-09-19
+topic: ISS H infrastructure blockers
+source_record: 2026-09-19-issh-pr3-infra-blockers
+role: user
+---
+isomorphisms/issh PR #3, “Add first Edric embedded/CLI boundary,” is open and mergeable. The Edric executable receipt, ai-ci, and CodeQL are green; the remaining failures are REUSE provenance for fork-owned files and the mirrored RFC, plus CIFuzz assuming the PR commit exists in the upstream libssh2 checkout. Help me resolve those two infrastructure blockers without inventing RFC licensing or claiming fuzz evidence that did not run, then determine whether the PR is ready to merge.
+===
+
+record: 030
+date: 2026-09-19
+topic: Idriç equality syntax
+source_record: 2026-09-19-idric104-equality-spelling
+role: user
+---
+isomorphisms/Idric issue #104, “Define canonical runtime equality spelling for Idriç source,” was opened today after the current DEX Text-equality fixture exposed that `.idric` source still needs inherited `==` even though Idriç’s notation plan uses `=`, `≠`, and `≟`. Help me settle the canonical runtime/decidable equality spelling and carry that decision through the focused source, parser/elaboration, compatibility, and STYLE.md boundaries without making inherited `==` canonical Idriç syntax.
+===
+
+record: 031
+date: 2026-09-19
+topic: ARM framebuffer acceptance
+source_record: 2026-09-19-arm64-framebuffer-path
+role: user
+---
+isomorphisms/idric-arm-thumb PR #64, “Restore ARM/Thumb screen-red oracle on the native development line,” is open and mergeable. At its current head, verify, speaker-tone, GPIO, and full-system speaker jobs pass, while the full-system red-screen job boots Ubuntu successfully but ends with `FBDEV_PRESENT=0` and `PROGRAM_STATUS=125`. Help me repair that QEMU/kernel/device acceptance path so the oracle can exercise a real `/dev/fb0` without weakening or relabeling the evidence boundary.
+===
+
+record: 032
+date: 2026-09-19
+topic: local model code supervision
+source_record: 2026-09-19-qwen-code-hygiene
+role: user
+---
+What's a good Qwen setup on Alibaba to keep working on code hygiene?
+===
+
+record: 033
+date: 2026-09-19
+topic: supervisor context
+source_record: 2026-09-19-feed-model-intentions
+role: user
+---
+I think we should feed it my intentions
+===
+
+record: 034
+date: 2026-09-19
+topic: repository intent source
+source_record: 2026-09-19-repos-as-intention-source
+role: user
+---
+Yes I'm asking specifically about my repos
+===
+
+record: 035
+date: 2026-09-19
+topic: chat history as intent store
+source_record: 2026-09-19-chat-folder-intentions
+role: user
+---
+My private chat GPT repo if it's properly organized into folders would be the perfect intention
+===
+
+record: 036
+date: 2026-09-19
+topic: Cockswain model evaluation
+source_record: 2026-09-19-cockswain-open-model-test
+role: user
+---
+Let's get a few open weights models in there and see about chat history too to test against
+===
