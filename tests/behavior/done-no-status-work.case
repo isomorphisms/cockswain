@@ -1,0 +1,8 @@
+expected_action	DONE
+goal	Complete the existing task without inventing status-only follow-up work.
+state	The intended change is merged from the verified exact head. All required checks passed. The one unrelated discovery is already recorded in an existing durable issue. No implementation, review, external event, or human decision remains for this task.
+done_when	The intended change is merged from the verified head.
+done_when	All required checks pass.
+done_when	Secondary discoveries are either resolved or already tracked durably.
+history	assistant	The implementation is merged and the unrelated cleanup already has its own issue.
+history	user	Do not create another PR just to say that this one is done.

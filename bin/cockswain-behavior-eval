@@ -1,0 +1,93 @@
+#!/bin/sh
+set -eu
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
+case_root=${1:-"$repo_dir/tests/behavior"}
+
+command -v jq >/dev/null 2>&1 || {
+    printf 'cockswain: jq is required\n' >&2
+    exit 69
+}
+
+[ -d "$case_root" ] || {
+    printf 'cockswain: behavior case directory not found: %s\n' "$case_root" >&2
+    exit 66
+}
+
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT HUP INT TERM
+mkdir -p "$work/cases"
+
+found=0
+for case_path in "$case_root"/*.case; do
+    [ -f "$case_path" ] || continue
+    found=1
+    case_id=$(basename "$case_path" .case)
+
+    expected=$(awk -F '\t' '$1 == "expected_action" {print $2; exit}' "$case_path")
+    case "$expected" in
+        CONTINUE|WAIT|HUMAN|DONE) ;;
+        *)
+            printf 'cockswain: %s has invalid or missing expected_action\n' "$case_id" >&2
+            exit 65
+            ;;
+    esac
+
+    goal=$(awk -F '\t' '$1 == "goal" {sub(/^[^\t]*\t/, ""); print; exit}' "$case_path")
+    state=$(awk -F '\t' '$1 == "state" {sub(/^[^\t]*\t/, ""); print; exit}' "$case_path")
+    [ -n "$goal" ] && [ -n "$state" ] || {
+        printf 'cockswain: %s is missing goal or state\n' "$case_id" >&2
+        exit 65
+    }
+
+    jq -Rn '[inputs | select(startswith("unresolved\t")) | sub("^unresolved\t"; "")]' \
+        "$case_path" > "$work/unresolved.json"
+    jq -Rn '[inputs | select(startswith("done_when\t")) | sub("^done_when\t"; "")]' \
+        "$case_path" > "$work/done_when.json"
+    jq -Rn '[inputs | select(startswith("history\t")) | capture("^history\\t(?<role>[^\\t]+)\\t(?<content>.*)$")]' \
+        "$case_path" > "$work/history.json"
+
+    jq -e 'length > 0' "$work/done_when.json" >/dev/null || {
+        printf 'cockswain: %s has no done_when condition\n' "$case_id" >&2
+        exit 65
+    }
+
+    jq -n \
+        --arg case_id "$case_id" \
+        --arg expected_action "$expected" \
+        --arg goal "$goal" \
+        --arg state "$state" \
+        --slurpfile unresolved "$work/unresolved.json" \
+        --slurpfile done_when "$work/done_when.json" \
+        --slurpfile chat_history "$work/history.json" \
+        '{
+          case_id: $case_id,
+          expected_action: $expected_action,
+          goal: $goal,
+          state: {summary: $state},
+          unresolved: $unresolved[0],
+          done_when: $done_when[0],
+          chat_history: $chat_history[0]
+        }' > "$work/cases/$case_id.json"
+done
+
+[ "$found" -eq 1 ] || {
+    printf 'cockswain: no .case files found under %s\n' "$case_root" >&2
+    exit 65
+}
+
+requested_mode=${COCKSWAIN_HISTORY_MODE:-both}
+case "$requested_mode" in
+    both) modes='with without' ;;
+    with|without) modes=$requested_mode ;;
+    *)
+        printf 'cockswain: COCKSWAIN_HISTORY_MODE must be with, without, or both\n' >&2
+        exit 64
+        ;;
+esac
+
+for mode in $modes; do
+    printf 'behavior_history_mode\t%s\n' "$mode"
+    COCKSWAIN_HISTORY_MODE=$mode "$script_dir/cockswain-eval" "$work/cases"
+done

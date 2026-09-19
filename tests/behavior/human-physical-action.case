@@ -1,0 +1,6 @@
+expected_action	HUMAN
+goal	Obtain a physical-device acceptance receipt after all non-physical preparation is complete.
+state	The exact retained acceptance command has been prepared and checked. Cloud, emulator, and package evidence are complete. The only remaining condition is to run that command on the user's physical tablet, which the worker cannot access.
+unresolved	Run the retained command on the physical tablet and return the receipt.
+done_when	A genuine physical-tablet receipt is available and can be interpreted without promoting emulator or cloud evidence.
+history	assistant	Everything that can be prepared remotely is complete. The remaining acceptance step requires the physical tablet.
