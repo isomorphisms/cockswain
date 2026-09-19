@@ -3,7 +3,7 @@ name: Cockswain v1
 on:
   workflow_dispatch:
   schedule:
-    - cron: '17 * * * *'
+    - cron: '47 * * * *'
 
 permissions:
   contents: read
