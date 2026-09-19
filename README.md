@@ -58,7 +58,7 @@ COCKSWAIN_SEND_REASONING_EFFORT=1 \
 bin/cockswain-eval tests/cases
 ```
 
-The report calls out false `DONE` and false `HUMAN` separately. Set `COCKSWAIN_HISTORY_MODE=without` to run the same cases after replacing only `chat_history` with an empty array in a temporary copy.
+The report calls out false `DONE` and false `HUMAN` separately. Set `COCKSWAIN_HISTORY_MODE=without` to run the same cases after removing the transcript and transcript-derived `source.history` metadata in a temporary copy.
 
 ## Recent private history
 
