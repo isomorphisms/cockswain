@@ -23,8 +23,8 @@ command -v awk >/dev/null 2>&1 || {
     exit 66
 }
 
-mkdir -p "$result_dir"
 umask 077
+mkdir -p "$result_dir"
 summary="$result_dir/summary.tsv"
 ablation="$result_dir/history-ablation.tsv"
 models_tmp=$(mktemp)
