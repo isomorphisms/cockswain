@@ -57,4 +57,8 @@ printf 'false_done\t%d\n' "$false_done"
 printf 'false_human\t%d\n' "$false_human"
 printf 'invalid_output\t%d\n' "$invalid"
 
-[ "$false_done" -eq 0 ] && [ "$false_human" -eq 0 ] && [ "$invalid" -eq 0 ]
+[ "$total" -gt 0 ] &&
+[ "$correct" -eq "$total" ] &&
+[ "$false_done" -eq 0 ] &&
+[ "$false_human" -eq 0 ] &&
+[ "$invalid" -eq 0 ]
