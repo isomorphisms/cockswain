@@ -1,0 +1,9 @@
+# Open-weight checkpoints for the first hyperplane experiment.
+# One Hugging Face model repository per line.
+EleutherAI/pythia-410m
+Qwen/Qwen3-0.6B
+allenai/OLMo-2-0425-1B
+allenai/OLMo-2-0425-1B-SFT
+allenai/OLMo-2-0425-1B-DPO
+allenai/OLMo-2-0425-1B-Instruct
+HuggingFaceTB/SmolLM3-3B
