@@ -37,8 +37,13 @@ Evidence rules:
   become relevant again;
 - an execution job with implementable work remaining is CONTINUE, not DONE
   merely because a plan or audit exists;
-- an ambiguous acknowledgement does not authorize an irreversible merge,
-  deletion, or closure.
+- an ambiguous acknowledgement does not create authority for an irreversible
+  merge, deletion, or closure;
+- authority established by an earlier human merge-authorizing task persists
+  through ordinary continuation and repository-state refresh while task scope
+  stays the same;
+- review-only context, revocation, unresolved objection, material scope change,
+  or missing prior context means merge authority is absent or unknown.
 
 Return JSON only, with exactly these keys:
 

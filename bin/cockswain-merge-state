@@ -1,0 +1,90 @@
+#!/bin/sh
+set -eu
+
+[ "$#" -eq 1 ] || {
+    echo 'usage: cockswain-merge-state MERGE-STATE.tsv' >&2
+    exit 64
+}
+
+state=$1
+[ -f "$state" ] || {
+    printf 'cockswain: merge-state file not found: %s\n' "$state" >&2
+    exit 66
+}
+
+awk -F '\t' '
+BEGIN { OFS="\t" }
+NR==1 {
+    expected="status\tcode\tobject_kind\tobject_ref\thead\taction\tdetail"
+    if ($0!=expected) {
+        print "cockswain: invalid merge-state header" > "/dev/stderr"
+        exit 65
+    }
+    next
+}
+NF!=7 || ($1!="READY" && $1!="BLOCKED") {
+    print "cockswain: malformed merge-state row " NR > "/dev/stderr"
+    exit 65
+}
+{
+    rows++
+    if ($2=="READY") {
+        ready++
+        ready_row=$0
+        next
+    }
+    blocked++
+    if ($2=="DRAFT") {
+        if ($6=="mark-ready") {
+            mechanical++
+            if (mechanical_row=="") mechanical_row=$0
+        } else if ($6=="wait" || $6=="hold-draft") {
+            waiting++
+            if (wait_row=="") wait_row=$0
+        } else {
+            human++
+            if (human_row=="") human_row=$0
+        }
+    } else if ($2=="PHYSICAL_EXECUTION_REQUIRED" || $2=="HUMAN_AUTHORIZATION_REQUIRED") {
+        human++
+        if (human_row=="") human_row=$0
+    } else if ($2=="CI_PENDING") {
+        waiting++
+        if (wait_row=="") wait_row=$0
+    } else {
+        mechanical++
+        if (mechanical_row=="") mechanical_row=$0
+    }
+}
+END {
+    if (rows==0 || (ready && blocked) || ready>1) {
+        print "cockswain: inconsistent merge-state result" > "/dev/stderr"
+        exit 65
+    }
+
+    if (mechanical) {
+        split(mechanical_row,field,"\t")
+        chosen="CONTINUE"
+    } else if (human) {
+        split(human_row,field,"\t")
+        chosen="HUMAN"
+    } else if (waiting) {
+        split(wait_row,field,"\t")
+        chosen="WAIT"
+    } else if (ready==1) {
+        split(ready_row,field,"\t")
+        chosen="CONTINUE"
+    } else {
+        print "cockswain: merge-state has no actionable row" > "/dev/stderr"
+        exit 65
+    }
+
+    print "action",chosen
+    print "reason_code",field[2]
+    print "object_kind",field[3]
+    print "object_ref",field[4]
+    print "head",field[5]
+    print "next_action",field[6]
+    print "detail",field[7]
+}
+' "$state"

@@ -11,13 +11,24 @@ jobs:
   corpus-contract:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Prove exact harness checkout
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
       - name: Check shell syntax
         run: |
-          for script in bin/cockswain-* bin/import-chatgpt-export tests/test-corpus-cases.sh tests/test-behavior-cases.sh; do
+          for script in bin/cockswain-* bin/import-chatgpt-export tests/test-corpus-cases.sh tests/test-behavior-cases.sh tests/test-merge-state.sh tests/test-authority-receipt.sh; do
             sh -n "$script"
           done
       - name: Verify verbatim corpus evaluation contract
         run: sh tests/test-corpus-cases.sh
       - name: Verify privacy-reduced behavior regressions
         run: sh tests/test-behavior-cases.sh
+      - name: Consume deterministic merge blockers without model inference
+        run: sh tests/test-merge-state.sh
+      - name: Preserve contextual authority provenance
+        run: sh tests/test-authority-receipt.sh
