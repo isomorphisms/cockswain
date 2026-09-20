@@ -1,0 +1,7 @@
+expected_with_history	WAIT
+expected_without_history	WAIT
+goal	Use current-head CI before deciding whether to issue the physical ARMv7 acceptance probe.
+state	The required current-head workflow is actively running. All useful pre-result review is complete and there is no independent work that would change the next decision before the workflow result arrives.
+unresolved	The current-head workflow result is not available yet.
+done_when	The workflow finishes and the result can be used to choose the next CONTINUE, HUMAN, WAIT, or DONE action.
+history_record	corpus/chat-history/2026-09-14--19-verbatim.txt	021

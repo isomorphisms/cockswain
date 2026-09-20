@@ -1,0 +1,97 @@
+#!/bin/sh
+set -eu
+
+if [ "$#" -gt 1 ]; then
+    printf 'usage: %s [REPORT.md]\n' "$0" >&2
+    exit 64
+fi
+
+owner=${COCKSWAIN_OWNER:-isomorphisms}
+limit=${COCKSWAIN_LIMIT:-100}
+report=${1:-cockswain-v1-queue.md}
+
+command -v gh >/dev/null 2>&1 || {
+    printf 'cockswain-v1: gh is required\n' >&2
+    exit 69
+}
+command -v jq >/dev/null 2>&1 || {
+    printf 'cockswain-v1: jq is required\n' >&2
+    exit 69
+}
+
+tmp_dir=$(mktemp -d)
+trap 'rm -rf "$tmp_dir"' EXIT HUP INT TERM
+
+search_open()
+{
+    kind=$1
+    output=$2
+
+    gh api --method GET search/issues \
+        -f q="user:$owner is:$kind is:open" \
+        -f sort=updated \
+        -f order=asc \
+        -f per_page="$limit" |
+    jq --arg owner "$owner" '
+        .items
+        | map(
+            select(
+                .repository_url != ("https://api.github.com/repos/" + $owner + "/cockswain")
+                or .title != "Cockswain v1 queue"
+            )
+            | {
+                repository: {
+                    nameWithOwner:
+                        (.repository_url | sub("https://api.github.com/repos/"; ""))
+                },
+                number: .number,
+                title: .title,
+                updatedAt: .updated_at,
+                url: .html_url
+            }
+        )
+    ' > "$output"
+}
+
+search_open pr "$tmp_dir/prs.json"
+search_open issue "$tmp_dir/issues.json"
+
+pr_count=$(jq 'length' "$tmp_dir/prs.json")
+issue_count=$(jq 'length' "$tmp_dir/issues.json")
+generated=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+
+{
+    printf '# Cockswain v1 queue\n\n'
+    printf 'Generated: %s\n\n' "$generated"
+    printf 'This is deliberately dumb v1 supervision: unresolved GitHub work, oldest update first. '
+    printf 'An item remains here until GitHub says it is closed or merged. '
+    printf 'The report shows at most %s pull requests and %s issues.\n\n' "$limit" "$limit"
+
+    printf '## Open pull requests (%s shown)\n\n' "$pr_count"
+    if [ "$pr_count" -eq 0 ]; then
+        printf 'None.\n'
+    else
+        jq -r '
+            .[] |
+            "- [" +
+            .repository.nameWithOwner + "#" + (.number | tostring) +
+            " — " + (.title | gsub("\\r|\\n"; " ")) +
+            "](" + .url + ") — updated " + .updatedAt
+        ' "$tmp_dir/prs.json"
+    fi
+
+    printf '\n## Open issues (%s shown)\n\n' "$issue_count"
+    if [ "$issue_count" -eq 0 ]; then
+        printf 'None.\n'
+    else
+        jq -r '
+            .[] |
+            "- [" +
+            .repository.nameWithOwner + "#" + (.number | tostring) +
+            " — " + (.title | gsub("\\r|\\n"; " ")) +
+            "](" + .url + ") — updated " + .updatedAt
+        ' "$tmp_dir/issues.json"
+    fi
+} > "$report"
+
+printf 'cockswain-v1: wrote %s (%s PRs, %s issues)\n' "$report" "$pr_count" "$issue_count" >&2

@@ -1,0 +1,6 @@
+expected_with_history	DONE
+expected_without_history	DONE
+goal	Close a finished work thread without inventing status-only follow-up work.
+state	The intended change is merged from the verified head, required checks passed, and every secondary discovery is either resolved or already tracked durably. No implementation, external event, or human decision remains.
+done_when	The intended change is merged with required evidence and no untracked completion condition remains.
+history_record	corpus/chat-history/2026-09-14--19-verbatim.txt	003

@@ -7,6 +7,8 @@
   "properties": {
     "case_id": {"type": "string"},
     "expected_action": {"enum": ["CONTINUE", "WAIT", "HUMAN", "DONE"]},
+    "expected_action_with_history": {"enum": ["CONTINUE", "WAIT", "HUMAN", "DONE"]},
+    "expected_action_without_history": {"enum": ["CONTINUE", "WAIT", "HUMAN", "DONE"]},
     "goal": {"type": "string", "minLength": 1},
     "source": {"type": "object"},
     "state": {"type": "object"},

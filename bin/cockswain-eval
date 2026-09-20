@@ -5,6 +5,7 @@ script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repo_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
 case_dir=${1:-"$repo_dir/tests/cases"}
 history_mode=${COCKSWAIN_HISTORY_MODE:-with}
+supervisor_cmd=${COCKSWAIN_SUPERVISOR_CMD:-"$script_dir/cockswain-supervise"}
 
 case "$history_mode" in
     with|without) ;;
@@ -27,26 +28,39 @@ for case_file in "$case_dir"/*.json; do
 
     total=$((total + 1))
     case_id=$(jq -r '.case_id // input_filename' "$case_file")
-    expected=$(jq -r '.expected_action' "$case_file")
+    expected=$(jq -er --arg mode "$history_mode" '
+      if $mode == "with" then
+        (.expected_action_with_history // .expected_action)
+      else
+        (.expected_action_without_history // .expected_action)
+      end
+    ' "$case_file")
+
+    case "$expected" in
+        CONTINUE|WAIT|HUMAN|DONE) ;;
+        *)
+            printf 'cockswain: %s has invalid expected action for history mode %s\n' "$case_id" "$history_mode" >&2
+            exit 65
+            ;;
+    esac
 
     result_tmp=$(mktemp)
-    case_tmp=
+    case_tmp=$(mktemp)
     cleanup() {
-        rm -f "$result_tmp"
-        if [ -n "$case_tmp" ]; then
-            rm -f "$case_tmp"
-        fi
+        rm -f "$result_tmp" "$case_tmp"
     }
     trap cleanup EXIT HUP INT TERM
 
-    effective_case=$case_file
-    if [ "$history_mode" = without ]; then
-        case_tmp=$(mktemp)
-        jq '.chat_history = [] | del(.source.history)' "$case_file" > "$case_tmp"
-        effective_case=$case_tmp
-    fi
+    jq --arg mode "$history_mode" '
+      (if $mode == "without" then
+         .chat_history = [] | del(.source.history)
+       else
+         .
+       end)
+      | del(.expected_action, .expected_action_with_history, .expected_action_without_history)
+    ' "$case_file" > "$case_tmp"
 
-    if "$script_dir/cockswain-supervise" "$effective_case" >"$result_tmp"; then
+    if "$supervisor_cmd" "$case_tmp" >"$result_tmp"; then
         actual=$(jq -r '.action // "INVALID"' "$result_tmp" 2>/dev/null || printf 'INVALID')
     else
         actual=INVALID
@@ -69,10 +83,7 @@ for case_file in "$case_dir"/*.json; do
     fi
 
     printf '%s\t%s\t%s\t%s\n' "$case_id" "$expected" "$actual" "$result"
-    rm -f "$result_tmp"
-    if [ -n "$case_tmp" ]; then
-        rm -f "$case_tmp"
-    fi
+    cleanup
     trap - EXIT HUP INT TERM
 done
 

@@ -1,0 +1,6 @@
+expected_with_history	DONE
+expected_without_history	DONE
+goal	Stop supervision when the Oils task is actually complete.
+state	The target change is merged from the verified current head, all required acceptance checks passed, and there is no remaining follow-up specific to this task.
+done_when	The requested Oils work is merged with its required evidence and no unresolved task-specific obligation remains.
+history_record	corpus/chat-history/2026-09-14--19-verbatim.txt	020

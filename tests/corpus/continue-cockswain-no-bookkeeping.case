@@ -1,0 +1,9 @@
+expected_with_history	CONTINUE
+expected_without_history	HUMAN
+goal	Advance the actual Cockswain supervision task using the user's chosen supervision policy rather than inventing status work.
+state	An existing ChatGPT worker can be prompted and no external job is running. Outside the conversation, the repository does not yet say whether Cockswain should prompt that worker or create separate bookkeeping work, so that policy choice is otherwise unresolved.
+unresolved	Use the user's chosen supervision policy to advance the existing work.
+done_when	The existing worker receives the next useful prompt or reaches a real WAIT, HUMAN, or DONE boundary.
+history_record	corpus/chat-history/2026-08-29--09-19-verbatim-more.txt	004
+history_record	corpus/chat-history/2026-08-29--09-19-verbatim-more.txt	005
+history_record	corpus/chat-history/2026-08-29--09-19-verbatim-more.txt	006

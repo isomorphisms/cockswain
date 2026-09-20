@@ -24,7 +24,14 @@ command -v curl >/dev/null 2>&1 || {
 }
 
 system_prompt=$(cat "$repo_dir/prompts/supervisor.md")
-work_item=$(jq -c 'del(.case_id, .expected_action)' "$case_file")
+work_item=$(jq -c '
+  del(
+    .case_id,
+    .expected_action,
+    .expected_action_with_history,
+    .expected_action_without_history
+  )
+' "$case_file")
 
 payload=$(jq -n \
     --arg model "$model" \

@@ -1,0 +1,167 @@
+record: 001
+date: 2026-09-14
+thread: Cat Food Android runtimes
+role: user
+---
+Ysh Or ish or oils or grease. I should have binaries for all on both tablet and phone cat food
+===
+
+record: 002
+date: 2026-09-18
+thread: IB selection
+role: user
+---
+IB 32 yes
+===
+
+record: 003
+date: 2026-09-18
+thread: Durable agent guidance
+role: user
+---
+You've got to make notes in aici or cat food or agents markdown files or wherever you got to stop making these mistakes
+===
+
+record: 004
+date: 2026-09-15
+thread: Cat Food package completeness
+role: user
+---
+Are ish and Ike fully compiled in cat food for phone and tablet
+===
+
+record: 005
+date: 2026-09-15
+thread: Cat Food package completeness
+role: user
+---
+Let's make them
+===
+
+record: 006
+date: 2026-09-16
+thread: Failure investigation
+role: user
+---
+Well let's figure out what's going on here
+===
+
+record: 007
+date: 2026-09-18
+thread: Merge backlog
+role: user
+---
+All right there's a bunch of merges that are waiting on CI runs or at least they were last time I checked can you go through and merge them if everything is completed
+===
+
+record: 008
+date: 2026-09-16
+thread: Ike and ai-ci
+role: user
+---
+I think we should get Ike to the point where aici can rely upon it
+===
+
+record: 009
+date: 2026-09-18
+thread: Refresh project state
+role: user
+---
+Refresh
+===
+
+record: 010
+date: 2026-09-18
+thread: Merge/closeout
+role: user
+---
+Good
+===
+
+record: 011
+date: 2026-09-18
+thread: Progress review
+role: user
+---
+All right we've done a lot of work since Wednesday 9:00 a.m. how are we looking on this now
+===
+
+record: 012
+date: 2026-09-17
+thread: Batch physical acceptance
+role: user
+---
+What would save me more time than any of those suggestions you are making is to batch all of the acceptance runs that I need to run on the phone into one package for me and batch all of the acceptance runs that I need to run on the tablet into one package for me
+===
+
+record: 013
+date: 2026-09-18
+thread: Physical acceptance follow-up
+role: user
+---
+Does this still need to be run
+===
+
+record: 014
+date: 2026-09-18
+thread: Repair planning
+role: user
+---
+All right so what needs to be fixed and what's your plan to fix it
+===
+
+record: 015
+date: 2026-09-18
+thread: Evidence proof
+role: user
+---
+Let's prove that
+===
+
+record: 016
+date: 2026-09-18
+thread: Evidence proof
+role: user
+---
+Great
+===
+
+record: 017
+date: 2026-09-17
+thread: PR reference wording
+role: user
+---
+Make a note in all the appropriate agents marked Downs that whenever you reference a pull request don't just use the number add the title because full request numbers and exact heads don't mean anything I mean yeah it might be useful to you you can keep that Sha if that helps you figure out what you're doing and do it faster and more accurately but for me I understand words not hashes
+===
+
+record: 018
+date: 2026-09-14
+thread: ai-ci weekly acceptance ledger
+role: user
+---
+Every week, turn the latest `isomorphisms/ai-ci` source state into a compact acceptance ledger. Track present-branch runs, fixtures, cross-repo receipts, and ISA/opcode checks; call out regressions or stale assumptions; and finish with the highest-value item that can be completed without my input, with an executable finish condition.
+===
+
+record: 019
+date: 2026-09-15
+thread: Grease PR #24
+role: user
+---
+Grease PR #24 is the concrete blocker for getting real `ish` binaries into Cat Food #42 on both Android targets. At exact head a4eb3da955f940c05493581eadc1ea91dd098220, both the ARMv7 phone and AArch64 tablet jobs successfully bootstrap the pinned Idriç revision and generate Chez source, then both fail at the same `Cross-build real Ish package` step; packaging and prerelease publication are skipped. Help me isolate the common cross-build failure and make only the correction needed, without aliasing Ish to Grease/YSH/OSH or claiming physical-device execution.
+===
+
+record: 020
+date: 2026-09-18
+thread: PR reference wording
+role: user
+---
+Keyboard 11 bro you said that you already put in the agent markdown file that every time you talk about a pull request to me you can use the exact head hash if it helps yourself but I actually doesn't mean anything to me I need the title
+===
+
+record: 021
+date: 2026-09-14
+thread: Cat Food PR #42
+role: user
+---
+Cat Food PR #42 was opened today to expose the shell runtimes on both Android targets. Grease, ysh, osh, and oils-for-unix are already deliverable from the pinned Oils artifact; the only stated reason it remains draft is that the maintained ish implementation still lacks honest ARMv7 phone and AArch64 tablet packages. Help me close that specific gap without aliasing ish to Grease or OSH.
+===

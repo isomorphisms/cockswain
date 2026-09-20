@@ -41,6 +41,12 @@ This repository is public. Never commit personal/private ChatGPT exports, creden
 
 Synthetic or deliberately public regression fixtures are acceptable. Keep private histories under ignored local paths such as `.private/`.
 
+## Public transcript corpus
+
+`corpus/chat-history/` is literal transcript evidence only. Do not place summaries, inferred intent, reconstructed assistant replies, or synthetic continuations there.
+
+Evaluation cases must reference corpus records and extract them; do not copy or rewrite transcript text into labels. Keep objective state and expected actions outside the transcript. History can change a supervision decision, but it is never proof that an external event happened.
+
 ## Implementation
 
 Keep the first loop small and auditable. Prefer plain shell plus jq/curl for orchestration. Resolve paths from the script location so commands work from arbitrary current directories.
