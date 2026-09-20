@@ -1,0 +1,70 @@
+#!/bin/sh
+set -eu
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "$script_dir/.." && pwd)
+mirror_dir="$repo_root/vendor/openai-api"
+
+upstream_repo='https://github.com/openai/openai-openapi.git'
+upstream_raw='https://raw.githubusercontent.com/openai/openai-openapi'
+
+upstream_sha=$(
+    git ls-remote "$upstream_repo" refs/heads/main |
+        awk 'NR == 1 { print $1 }'
+)
+
+case "$upstream_sha" in
+    ''|*[!0-9a-f]*)
+        printf 'invalid upstream revision: %s\n' "$upstream_sha" >&2
+        exit 1
+        ;;
+esac
+
+if [ "${#upstream_sha}" -ne 40 ]; then
+    printf 'invalid upstream revision length: %s\n' "$upstream_sha" >&2
+    exit 1
+fi
+
+tmp_dir=$(mktemp -d)
+trap 'rm -rf "$tmp_dir"' EXIT HUP INT TERM
+
+fetch() {
+    remote_path=$1
+    output_path=$2
+    curl \
+        --fail \
+        --location \
+        --retry 3 \
+        --silent \
+        --show-error \
+        "$upstream_raw/$upstream_sha/$remote_path" \
+        --output "$output_path"
+}
+
+fetch openapi.yaml "$tmp_dir/openapi.yaml"
+fetch LICENSE "$tmp_dir/LICENSE"
+
+if ! grep -Eq '^openapi:[[:space:]]*3\.1([.]|[[:space:]]|$)' "$tmp_dir/openapi.yaml"; then
+    printf 'downloaded OpenAPI document does not declare OpenAPI 3.1\n' >&2
+    exit 1
+fi
+
+spec_sha=$(sha256sum "$tmp_dir/openapi.yaml" | awk '{ print $1 }')
+license_sha=$(sha256sum "$tmp_dir/LICENSE" | awk '{ print $1 }')
+
+cat > "$tmp_dir/UPSTREAM" <<EOF
+source_repository https://github.com/openai/openai-openapi
+source_revision $upstream_sha
+specification openapi.yaml
+specification_sha256 $spec_sha
+license LICENSE
+license_sha256 $license_sha
+EOF
+
+mkdir -p "$mirror_dir"
+cp "$tmp_dir/openapi.yaml" "$mirror_dir/openapi.yaml"
+cp "$tmp_dir/LICENSE" "$mirror_dir/LICENSE"
+cp "$tmp_dir/UPSTREAM" "$mirror_dir/UPSTREAM"
+
+printf 'OpenAI API mirror: %s\n' "$upstream_sha"
+printf 'OpenAPI SHA-256:   %s\n' "$spec_sha"
