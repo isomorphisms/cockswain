@@ -16,7 +16,7 @@ Files:
 Do not hand-edit the generated files. Refresh them with:
 
 ```sh
-bin/update-openai-api-mirror
+sh bin/update-openai-api-mirror
 ```
 
 The mirror intentionally follows the published API contract rather than
