@@ -1,0 +1,158 @@
+record: 001
+date: 2026-09-17T14:12:56Z
+thread: DEX physical phone acceptance
+role: assistant
+---
+This is a real physical-device pass.
+**Accepted evidence:**
+- MIRO A1
+- Android 14 / SDK 34
+- `armeabi-v7a`
+- exact backend `513d3515083edaf723a60292d8d333b7171469cb`
+- workflow `35138107496`
+- direct DEX loaded by ART
+- ARMv7 JNI library loaded
+- `RedditCli url` executed successfully
+- expected URL encoding verified
+The important fix was simply:
+```sh
+chmod 0444 classes.dex
+```
+Android 14 rejects writable dynamically loaded DEX.
+So we can now say **physical ARMv7 DEX→JNI URL probe: PASS**. We should still keep authenticated Reddit/network behavior as separate evidence; this test didn't exercise that.
+===
+
+record: 002
+date: 2026-09-17T14:27:03Z
+thread: ARMv7 phone follower
+role: assistant
+---
+Done.
+PR **#111** merged as `f84d198f211952838d0011d385a9fc6627b55076`. The ARMv7 phone follower on `main` is now:
+- `state = accepted`
+- `blocker = -`
+- exact suite revision `9df49d14…`
+- exact runtime archive SHA-256 `630a8fd4…`
+- `acceptance_kind = physical-device` The retained receipt records the physical ARMv7 Android/Termux execution, verified artifact, Bionic, 4096-byte pages, pointer width 4, default `off_t` 4, large-file `off_t` 8, and both probe modes PASS. Issue **#107 is closed completed**. So **no more phone work is needed for this ARMv7 native-boundary acceptance**.
+===
+
+record: 003
+date: 2026-09-17T08:49:23Z
+thread: AZ SMS ownership
+role: assistant
+---
+Done. `az/main` now owns the SMS service, Grease no longer does, and `ai-ci` follows `az/main` in the daily SMS receipt.
+===
+
+record: 004
+date: 2026-09-17T19:17:51Z
+thread: Software APK index
+role: assistant
+---
+Done. `isomorphisms/software` now has a simple public index containing only **Wegert** and **Accelerometer**, with direct APK, release-note, and source links. The name `software` stays. We can rename it later if its scope changes.
+===
+
+record: 005
+date: 2026-09-18T16:52:54Z
+thread: Cat Food PRs #46 and #50
+role: assistant
+---
+Yes. PR #46, **“Trim Android bootstrap and migrate legacy tablet commands,”** is merged. PR #50, **“Batch physical Android acceptance into phone and tablet packages,”** is also merged. Current `main`: `c43b1e21…` The final rebase preserved PR #53/#55, the host-only Idric-Net boundary, phone/tablet runtime-consumer separation, corrected submodule policy, and the refreshed follower chain. No known blocker remains.
+===
+
+record: 006
+date: 2026-09-18T17:17:02Z
+thread: append-FAT PR #9
+role: assistant
+---
+PR #9, **“Add staged tests for remaining appendfat evidence boundaries,” is clean and ready** at exact head `d6ca92e440b43818557911011bb9a99a14e15490`. All five required exact-head workflows passed: FAT image equivalence, FAT matrix, keep-size reservation, module load, and abrupt power cut. The PR has no unresolved review threads, GitHub reports it mergeable, and comparison against current `main` shows `behind_by: 0`. I did not merge it. The watch is stopped because its clean-gate condition has been satisfied.
+===
+
+record: 007
+date: 2026-09-18T15:08:06Z
+thread: append-FAT PR #9
+role: assistant
+---
+Yes — **the CI/test portion is done now**. On current head `0bc658d40cfe716765f1573a82a02b90155bd97d`, all five acceptance workflows pass. PR #9 is **mergeable** and **ready to land**; it is still open and has not been merged.
+===
+
+record: 008
+date: 2026-09-17T09:32:51Z
+thread: Idriç PR #92 compiler gate
+role: assistant
+---
+Almost. Everything except the compiler gate is finished:
+- #92 is still exactly at `e8214cbd…`, mergeable, one commit, four changed files, and still draft.
+- The final diff remains inside the intended Quaternion ↔ pair-of-`ExactComplex` fixture/test boundary.
+- Layout and style are green.
+- The exact-head compiler job is **still running** in `Bootstrap and focused tests`; it has not failed. So I did **not** promote or merge it yet. Doing that now would discard the exact-head compiler gate we deliberately established.
+===
+
+record: 009
+date: 2026-09-17T09:06:56Z
+thread: Oils #2 / Grease #13 cleanup
+role: assistant
+---
+Almost.
+The merge chain itself is clean: Oils #2 and Grease #13 are both merged and closed, with the intended evidence boundaries preserved.
+The only residue I found is that **both feature branches still exist**:
+- `isomorphisms/oils:native/linux-libc-vocabulary`
+- `isomorphisms/grease:native/linux-libc-vocabulary`
+So repository history is clean; branch housekeeping is not yet finished.
+===
+
+record: 010
+date: 2026-09-18T17:42:35Z
+thread: Oils #2 / Grease #13 cleanup
+role: assistant
+---
+Both branches are already gone now. So the 422 was harmless: Oils had already been deleted, and Grease is also absent.
+===
+
+record: 011
+date: 2026-09-18T02:06:01Z
+thread: ai-ci retrospective
+role: assistant
+---
+That makes sense. Most of what we merged tonight was repetitive verification work that should become ai-ci’s job.
+===
+
+record: 012
+date: 2026-09-18T02:07:47Z
+thread: ai-ci retrospective
+role: assistant
+---
+I’ll turn the recent failure modes into an audit-and-hardening job, not just a retrospective.
+===
+
+record: 013
+date: 2026-09-18T02:08:06Z
+thread: ai-ci retrospective
+role: assistant
+---
+The recurring issue is not one bug class; it is **proof becoming detached from the thing being merged**—wrong head, wrong base, wrong artifact, wrong runtime, stale dependency, or a check that never exercised the claimed boundary.
+===
+
+record: 014
+date: 2026-09-18T11:30:20Z
+thread: Android SD-card fallocate
+role: assistant
+---
+That settles the important question: **Android’s `/dev/fuse` SD-card path does not expose `FALLOC_FL_KEEP_SIZE` to Termux.**
+===
+
+record: 015
+date: 2026-09-18T13:26:11Z
+thread: append-FAT documentation
+role: assistant
+---
+append-FAT PR #10, **“Document fallocate source trail and high-level storage intent,”** is merged.
+===
+
+record: 016
+date: 2026-09-18T20:14:21Z
+thread: append-FAT exact-head workflows
+role: assistant
+---
+All five workflows have now passed at exact head `02f8ef1…`.
+===
