@@ -13,10 +13,12 @@ usage() {
 
 [ "$#" -gt 0 ] || usage
 
+tab=$(printf '\t')
+
 if [ "$1" = "--all" ]; then
     [ "$#" -eq 1 ] || usage
     set --
-    while IFS= read -r model; do
+    while IFS="$tab" read -r model revision; do
         case "$model" in
             ''|'#'*) continue ;;
         esac
@@ -36,21 +38,18 @@ command -v hf >/dev/null 2>&1 || {
 mkdir -p "$store/receipts"
 
 for model in "$@"; do
-    if ! grep -Fqx -- "$model" "$manifest"; then
+    if ! revision=$(awk -F '\t' -v wanted="$model" '
+        $1 == wanted { print $2; found = 1; exit }
+        END { if (!found) exit 1 }
+    ' "$manifest"); then
         printf 'cockswain: model is not in %s: %s\n' "$manifest" "$model" >&2
         exit 64
     fi
 
-    revision=$(python3 - "$model" <<'PY'
-import sys
-from huggingface_hub import model_info
-
-info = model_info(sys.argv[1], files_metadata=False)
-if not info.sha:
-    raise SystemExit("model has no resolved revision")
-print(info.sha)
-PY
-)
+    if ! printf '%s\n' "$revision" | grep -Eq '^[0-9a-f]{40}$'; then
+        printf 'cockswain: model revision is not a 40-hex commit: %s\n' "$model" >&2
+        exit 65
+    fi
 
     slug=$(printf '%s' "$model" | tr '/:' '__')
     dest="$store/$slug"
