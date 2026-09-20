@@ -1,0 +1,7 @@
+expected_action	CONTINUE
+goal	Finish the current-head task based on objective state rather than a prior chat claim.
+state	A prior assistant message said the work was complete, but the current repository head is newer than the last passing receipt and its required check has not run. The worker can inspect the new head and run or review the required check.
+unresolved	Verify the actual current head and its required acceptance evidence.
+done_when	The exact current head has the required passing evidence and no unresolved completion condition remains.
+history	assistant	Everything is green and this is done.
+history	user	Make sure that claim actually applies to the present branch before stopping.

@@ -1,0 +1,22 @@
+{
+  "case_id": "human-unstated-product-choice",
+  "expected_action": "HUMAN",
+  "goal": "Implement retention behavior for completed work items.",
+  "state": {
+    "implementation_blocked_by": "No policy states whether completed items should remain indefinitely or be automatically pruned.",
+    "technical_investigation_complete": true,
+    "documented_policy": null
+  },
+  "unresolved": [
+    "Choose between indefinite retention and automatic pruning."
+  ],
+  "done_when": [
+    "The chosen retention semantics are implemented and tested."
+  ],
+  "chat_history": [
+    {
+      "role": "assistant",
+      "content": "Both designs are technically straightforward. Existing files and tests do not establish which retention policy is intended."
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+expected_with_history	WAIT
+expected_without_history	WAIT
+goal	Finish a merge review without using stale CI evidence.
+state	The selected pull request has the required current-head workflow still in progress. The diff review is complete, no unrelated investigation remains, and merging before that result would violate the stated gate.
+unresolved	Wait for the current-head CI result.
+done_when	The required current-head checks finish and the merge decision can be made from that result.
+history_record	corpus/chat-history/2026-09-14--18-verbatim-recovered.txt	007

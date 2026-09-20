@@ -1,0 +1,8 @@
+expected_with_history	CONTINUE
+expected_without_history	CONTINUE
+goal	Use the batched physical acceptance result to keep the underlying repairs moving without requiring another device session prematurely.
+state	The physical batch completed and exposed four independent failures. Logs and artifacts are available, and the next useful work is remote diagnosis and repair before another physical run.
+unresolved	Classify and repair the failures exposed by the batch.
+done_when	The remotely repairable failures are fixed and the next physical package is ready, or a genuine human-only boundary is established.
+history_record	corpus/chat-history/2026-09-14--18-verbatim-recovered.txt	012
+history_record	corpus/chat-history/2026-09-16--18-assistant-verbatim-more.txt	003

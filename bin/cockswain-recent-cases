@@ -1,0 +1,137 @@
+#!/bin/sh
+set -eu
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
+
+usage() {
+    cat >&2 <<'USAGE'
+usage:
+  cockswain-recent-cases list NORMALIZED_HISTORY.json [COUNT]
+  cockswain-recent-cases build NORMALIZED_HISTORY.json CASE_SPEC.json OUTPUT_DIR
+USAGE
+    exit 64
+}
+
+command -v jq >/dev/null 2>&1 || {
+    printf 'cockswain: jq is required\n' >&2
+    exit 69
+}
+
+[ "$#" -ge 2 ] || usage
+mode=$1
+history_file=$2
+
+case "$mode" in
+list)
+    [ "$#" -le 3 ] || usage
+    count=${3:-20}
+    case "$count" in
+        ''|*[!0-9]*) printf 'cockswain: COUNT must be a non-negative integer\n' >&2; exit 64 ;;
+    esac
+
+    jq -r --argjson count "$count" '
+      sort_by(.update_time // .create_time // 0)
+      | reverse
+      | .[:$count][]
+      | [
+          (.id // ""),
+          ((.update_time // .create_time // 0) | tostring),
+          (.title // ""),
+          (([.chat_history[]? | select(.role == "user") | .content] | last // "")
+            | gsub("[\\r\\n\\t]+"; " ")
+            | if length > 240 then .[:237] + "..." else . end)
+        ]
+      | @tsv
+    ' "$history_file"
+    ;;
+
+build)
+    [ "$#" -eq 4 ] || usage
+    spec_file=$3
+    out_dir=$4
+    default_history=${COCKSWAIN_HISTORY_MESSAGES:-12}
+    case "$default_history" in
+        ''|*[!0-9]*) printf 'cockswain: COCKSWAIN_HISTORY_MESSAGES must be a non-negative integer\n' >&2; exit 64 ;;
+    esac
+
+    umask 077
+    mkdir -p "$out_dir"
+    out_abs=$(CDPATH= cd -- "$out_dir" && pwd -P)
+    case "$out_abs" in
+        "$repo_dir"|"$repo_dir"/*)
+            case "$out_abs" in
+                "$repo_dir/.private"|"$repo_dir/.private"/*) ;;
+                *)
+                    printf 'cockswain: private history cases inside this checkout must live under %s/.private\n' "$repo_dir" >&2
+                    exit 73
+                    ;;
+            esac
+            ;;
+    esac
+
+    tmp=$(mktemp)
+    trap 'rm -f "$tmp"' EXIT HUP INT TERM
+
+    jq -n -r \
+      --slurpfile history "$history_file" \
+      --slurpfile spec "$spec_file" \
+      --argjson default_history "$default_history" '
+      ($history[0] // error("normalized history must be a JSON array")) as $hist
+      | ($spec[0].cases // error("case spec must contain a cases array"))[] as $case
+      | if (($case.case_id // "") | test("^[A-Za-z0-9][A-Za-z0-9._-]*$")) | not then
+          error("case_id must use only A-Z, a-z, 0-9, dot, underscore, or hyphen")
+        else . end
+      | if (["CONTINUE", "WAIT", "HUMAN", "DONE"] | index($case.expected_action)) == null then
+          error("expected_action must be CONTINUE, WAIT, HUMAN, or DONE")
+        else . end
+      | if (($case.goal | type) != "string") or ($case.goal | length) == 0 then
+          error("goal must be a non-empty string")
+        else . end
+      | if (($case.state | type) != "object") then
+          error("state must be an object")
+        else . end
+      | if (($case.done_when | type) != "array") or ($case.done_when | length) == 0 then
+          error("done_when must be a non-empty array")
+        else . end
+      | ($hist | map(select(.id == $case.conversation_id)) | first) as $conversation
+      | if $conversation == null then
+          error("conversation_id not found in normalized history: " + ($case.conversation_id | tostring))
+        else . end
+      | ($case.history_messages // $default_history) as $history_messages
+      | if (($history_messages | type) != "number") or $history_messages < 0 or ($history_messages | floor) != $history_messages then
+          error("history_messages must be a non-negative integer")
+        else . end
+      | ($case
+          | del(.conversation_id, .history_messages)
+          | .source = ((.source // {}) + {
+              history: {
+                kind: "chatgpt_export",
+                conversation_id: $conversation.id,
+                title: ($conversation.title // ""),
+                update_time: ($conversation.update_time // null),
+                active_leaf: ($conversation.active_leaf // null)
+              }
+            })
+          | .chat_history = (
+              ($conversation.chat_history // [])
+              | if $history_messages == 0 then . else .[-$history_messages:] end
+            )
+        )
+      | [.case_id, (tojson)]
+      | @tsv
+    ' > "$tmp"
+
+    while IFS="$(printf '\t')" read -r case_id case_json; do
+        [ -n "$case_id" ] || continue
+        printf '%s\n' "$case_json" > "$out_abs/$case_id.json"
+    done < "$tmp"
+
+    count=$(wc -l < "$tmp" | tr -d ' ')
+    printf 'wrote %s private evaluation case(s) to %s\n' "$count" "$out_abs" >&2
+    ;;
+
+*)
+    usage
+    ;;
+esac

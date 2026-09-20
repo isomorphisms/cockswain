@@ -1,0 +1,8 @@
+expected_action	CONTINUE
+goal	Reach physical-device acceptance without confusing emulator evidence with physical evidence.
+state	The emulator path is green and the package exists, but the required physical-device receipt does not exist. The worker can still inspect the packaged artifact and prepare the exact physical acceptance command before involving the user.
+unresolved	Prepare and verify the exact physical-device command and artifact identity.
+unresolved	A physical receipt will still be required afterward.
+done_when	The intended physical device runs the exact packaged artifact and produces the required semantic receipt.
+history	assistant	The emulator run passed, so the physical test is effectively done.
+history	user	Do not promote cloud or emulator evidence into physical evidence.

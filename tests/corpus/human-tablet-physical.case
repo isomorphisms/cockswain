@@ -1,0 +1,7 @@
+expected_with_history	HUMAN
+expected_without_history	HUMAN
+goal	Obtain the required physical TAB_P10 acceptance receipt without promoting cloud or emulator evidence.
+state	The exact packaged artifact and retained acceptance command have already been prepared and checked. The only remaining completion condition is to execute that command on the user's physical tablet.
+unresolved	Run the retained acceptance command on the physical tablet and return its receipt.
+done_when	A genuine physical-tablet receipt for the exact packaged artifact is available.
+history_record	corpus/chat-history/2026-08-29--09-19-verbatim-more.txt	009

@@ -1,0 +1,12 @@
+expected_with_history	CONTINUE
+expected_without_history	HUMAN
+goal	Advance Cockswain v1 using the user's intended supervision mechanism without duplicating work.
+state	A ChatGPT worker is available and repository write access is available. No external job is running. More than one technically feasible supervision mechanism exists, and the objective repository state at this historical point does not select among them.
+unresolved	Choose and execute the next supervision mechanism.
+done_when	Cockswain performs the next useful supervision action using the user's intended mechanism without creating duplicate work.
+history_record	corpus/chat-history/2026-08-29--09-19-verbatim-more.txt	004
+history_record	corpus/chat-history/2026-08-29--09-19-verbatim-more.txt	005
+history_record	corpus/chat-history/2026-08-29--09-19-verbatim-more.txt	006
+checkpoint	1	CONTINUE	HUMAN
+checkpoint	2	CONTINUE	HUMAN
+checkpoint	3	CONTINUE	HUMAN

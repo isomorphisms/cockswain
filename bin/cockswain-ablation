@@ -1,0 +1,12 @@
+#!/bin/sh
+set -eu
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
+case_dir=${1:-"$repo_dir/tests/cases"}
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT HUP INT TERM
+status=0
+if COCKSWAIN_HISTORY_MODE=with "$script_dir/cockswain-eval" "$case_dir" > "$work/with.tsv"; then :; else status=1; fi
+if COCKSWAIN_HISTORY_MODE=without "$script_dir/cockswain-eval" "$case_dir" > "$work/without.tsv"; then :; else status=1; fi
+"$script_dir/cockswain-ablation-report" "$work/with.tsv" "$work/without.tsv"
+exit "$status"

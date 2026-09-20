@@ -1,0 +1,9 @@
+expected_action	CONTINUE
+goal	Continue the Android backend work using the corrected architecture.
+state	The backend task is incomplete and repository access is available. An earlier assumption routed Android work through ARM, but the user corrected the architecture: direct DEX is its own backend.
+unresolved	Continue the direct DEX implementation without routing it through the ARM backend.
+done_when	The direct DEX path is implemented and its structural boundary is tested.
+history	assistant	Because ARM work existed first, I will derive Android DEX generation from the ARM backend.
+history	user	DEX is its own backend, not an ARM-derived backend.
+required_output	DEX
+forbidden_output	ARM-derived

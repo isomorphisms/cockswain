@@ -1,0 +1,19 @@
+expected_with_history	CONTINUE
+expected_without_history	HUMAN
+goal	Build the recent public Cockswain history corpus according to the user's actual scope and transcript-quality corrections.
+state	The repository is writable and corpus work is incomplete. Outside the conversation, the objective state does not establish how much recent history is enough or whether summaries may count as transcript, so those policy choices would otherwise require the user.
+unresolved	Continue the corpus work while preserving the user's latest quantity and verbatim-history constraints.
+done_when	The selected recent public-safe corpus is large enough for the stated evaluation purpose and transcript history contains literal messages only.
+history_record	corpus/chat-history/2026-08-29--09-19-verbatim-more.txt	028
+history_record	corpus/chat-history/2026-09-19--20-assistant-verbatim-cockswain-thread.txt	001
+history_record	corpus/chat-history/2026-08-29--09-19-verbatim-more.txt	029
+history_record	corpus/chat-history/2026-09-19--20-assistant-verbatim-cockswain-thread.txt	011
+history_record	corpus/chat-history/2026-08-29--09-19-verbatim-more.txt	030
+history_record	corpus/chat-history/2026-09-19--20-assistant-verbatim-cockswain-thread.txt	018
+history_record	corpus/chat-history/2026-08-29--09-19-verbatim-more.txt	031
+history_record	corpus/chat-history/2026-09-19--20-assistant-verbatim-cockswain-thread.txt	019
+history_record	corpus/chat-history/2026-09-19--20-assistant-verbatim-cockswain-thread.txt	020
+checkpoint	2	CONTINUE	HUMAN
+checkpoint	4	CONTINUE	HUMAN
+checkpoint	6	CONTINUE	HUMAN
+checkpoint	9	CONTINUE	HUMAN

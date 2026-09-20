@@ -1,0 +1,8 @@
+expected_action	CONTINUE
+goal	Keep the existing coding task moving by prompting the already-open working ChatGPT thread. Cockswain is the supervisor, not the primary implementer, and should not create a duplicate issue or pull request merely to show activity.
+state	An existing working ChatGPT thread is available. The repository already has an open pull request for the task. No external job is running and no human-only action is required. The worker has not yet inspected the current failure, so useful work remains.
+unresolved	The working ChatGPT thread still needs to inspect the current PR state and continue the actual task.
+done_when	The existing worker finishes the task or reaches a real WAIT or HUMAN boundary.
+done_when	No duplicate bookkeeping issue or pull request is needed.
+history	user	No, I want you to ask ChatGPT to work, not create more PRs.
+history	assistant	The existing worker thread can continue the real task; Cockswain only needs to send it the next useful prompt.

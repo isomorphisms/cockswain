@@ -1,0 +1,49 @@
+#!/bin/sh
+set -eu
+[ "$#" -eq 2 ] || { printf 'usage: %s WITH_HISTORY_LOG WITHOUT_HISTORY_LOG\n' "$0" >&2; exit 64; }
+with_log=$1
+without_log=$2
+awk -F '\t' '
+  FNR == 1 { file_number++ }
+  $1 == "case" { next }
+  NF != 4 { next }
+  file_number == 1 {
+    expected_with[$1]=$2; actual_with[$1]=$3; order[++count]=$1; next
+  }
+  file_number == 2 {
+    expected_without[$1]=$2; actual_without[$1]=$3
+  }
+  END {
+    required_total=0
+    required_correct=0
+    missed_required=0
+    stable_total=0
+    stable_correct=0
+    spurious=0
+
+    print "case\texpected_with\tactual_with\texpected_without\tactual_without\texpected_changed\tactual_changed\tresult"
+    for (i=1; i<=count; i++) {
+      id=order[i]; ew=expected_with[id]; aw=actual_with[id]; ewo=expected_without[id]; awo=actual_without[id]
+      if (ewo == "") { print "cockswain: missing without-history row for " id > "/dev/stderr"; exit 65 }
+      ec=(ew != ewo ? "yes" : "no"); ac=(aw != awo ? "yes" : "no"); ok=(aw == ew && awo == ewo)
+      if (ew != ewo) {
+        required_total++
+        if (ok) required_correct++
+        if (aw == awo) missed_required++
+      } else {
+        stable_total++
+        if (ok) stable_correct++
+        if (aw != awo) spurious++
+      }
+      print id "\t" ew "\t" aw "\t" ewo "\t" awo "\t" ec "\t" ac "\t" (ok ? "PASS" : "FAIL")
+    }
+    print ""
+    print "total\t" count
+    print "required_action_changes_total\t" required_total
+    print "required_action_changes_correct\t" required_correct
+    print "missed_required_action_changes\t" missed_required
+    print "stable_action_total\t" stable_total
+    print "stable_action_correct\t" stable_correct
+    print "spurious_action_changes\t" spurious
+  }
+' "$with_log" "$without_log"

@@ -1,0 +1,101 @@
+#!/bin/sh
+set -eu
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
+case_dir=${1:-"$repo_dir/.private/cases/recent"}
+manifest=${COCKSWAIN_MODEL_MANIFEST:-"$repo_dir/models/models.json"}
+base_url=${COCKSWAIN_BASE_URL:-http://127.0.0.1:8000/v1}
+run_id=${COCKSWAIN_RUN_ID:-latest}
+result_dir=${COCKSWAIN_RESULTS_DIR:-"$repo_dir/eval/results/$run_id"}
+
+command -v jq >/dev/null 2>&1 || {
+    printf 'cockswain: jq is required\n' >&2
+    exit 69
+}
+command -v awk >/dev/null 2>&1 || {
+    printf 'cockswain: awk is required\n' >&2
+    exit 69
+}
+
+[ -d "$case_dir" ] || {
+    printf 'cockswain: case directory not found: %s\n' "$case_dir" >&2
+    exit 66
+}
+
+umask 077
+mkdir -p "$result_dir"
+summary="$result_dir/summary.tsv"
+ablation="$result_dir/history-ablation.tsv"
+models_tmp=$(mktemp)
+trap 'rm -f "$models_tmp"' EXIT HUP INT TERM
+jq -c '.models[]' "$manifest" > "$models_tmp"
+
+printf 'model\thistory\tstatus\ttotal\tcorrect\tfalse_done\tfalse_human\tinvalid_output\n' > "$summary"
+printf 'model\twith_correct\twithout_correct\twith_false_done\twithout_false_done\twith_false_human\twithout_false_human\twith_invalid\twithout_invalid\n' > "$ablation"
+
+all_pass=1
+while IFS= read -r model_row; do
+    model=$(printf '%s\n' "$model_row" | jq -r '.id')
+    send_reasoning=$(printf '%s\n' "$model_row" | jq -r 'if .send_reasoning_effort then "1" else "0" end')
+    slug=$(printf '%s' "$model" | tr '/: ' '___' | tr -cd 'A-Za-z0-9._-')
+
+    with_correct=0
+    with_false_done=0
+    with_false_human=0
+    with_invalid=0
+    without_correct=0
+    without_false_done=0
+    without_false_human=0
+    without_invalid=0
+
+    for history_mode in with without; do
+        log="$result_dir/$slug.$history_mode.tsv"
+        if COCKSWAIN_MODEL="$model" \
+           COCKSWAIN_BASE_URL="$base_url" \
+           COCKSWAIN_SEND_REASONING_EFFORT="$send_reasoning" \
+           COCKSWAIN_HISTORY_MODE="$history_mode" \
+           "$script_dir/cockswain-eval" "$case_dir" > "$log" 2>&1; then
+            status=PASS
+        else
+            status=FAIL
+            all_pass=0
+        fi
+
+        total=$(awk -F '\t' '$1 == "total" {print $2}' "$log" | tail -n 1)
+        correct=$(awk -F '\t' '$1 == "correct" {print $2}' "$log" | tail -n 1)
+        false_done=$(awk -F '\t' '$1 == "false_done" {print $2}' "$log" | tail -n 1)
+        false_human=$(awk -F '\t' '$1 == "false_human" {print $2}' "$log" | tail -n 1)
+        invalid=$(awk -F '\t' '$1 == "invalid_output" {print $2}' "$log" | tail -n 1)
+
+        : "${total:=0}" "${correct:=0}" "${false_done:=0}" "${false_human:=0}" "${invalid:=0}"
+        printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+            "$model" "$history_mode" "$status" "$total" "$correct" "$false_done" "$false_human" "$invalid" >> "$summary"
+
+        if [ "$history_mode" = with ]; then
+            with_correct=$correct
+            with_false_done=$false_done
+            with_false_human=$false_human
+            with_invalid=$invalid
+        else
+            without_correct=$correct
+            without_false_done=$false_done
+            without_false_human=$false_human
+            without_invalid=$invalid
+        fi
+    done
+
+    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+        "$model" \
+        "$with_correct" "$without_correct" \
+        "$with_false_done" "$without_false_done" \
+        "$with_false_human" "$without_false_human" \
+        "$with_invalid" "$without_invalid" >> "$ablation"
+done < "$models_tmp"
+
+cat "$summary"
+printf '\n'
+cat "$ablation"
+printf '\nresults\t%s\n' "$result_dir"
+
+[ "$all_pass" -eq 1 ]

@@ -1,0 +1,7 @@
+expected_action	WAIT
+goal	Keep one existing ChatGPT worker moving without interrupting it with redundant supervision prompts.
+state	The worker was already sent a concrete prompt and is still actively running it. There is no new objective evidence, no failure, and no useful parallel question to send. Sending another prompt now would only duplicate or interrupt the current work.
+unresolved	The worker has not yet returned its result.
+done_when	The running worker returns a result that can be evaluated for another CONTINUE, HUMAN, WAIT, or DONE decision.
+history	user	Keep it moving, but do not keep poking a thread that is already working.
+history	assistant	A concrete worker request is already in flight.

@@ -1,0 +1,4 @@
+.private/
+eval/results/
+*.token
+*.cookie

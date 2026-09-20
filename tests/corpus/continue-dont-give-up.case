@@ -1,0 +1,7 @@
+expected_with_history	CONTINUE
+expected_without_history	CONTINUE
+goal	Keep an autonomous repair moving while evidence and repository state remain available to inspect.
+state	The repair is incomplete, logs and repository files are available, and no credential, physical action, external job, or unresolved product decision blocks further investigation.
+unresolved	Inspect the remaining failure and continue the repair.
+done_when	The repair is verified complete or a concrete WAIT or HUMAN boundary is established.
+history_record	corpus/chat-history/2026-09-14--19-verbatim.txt	004

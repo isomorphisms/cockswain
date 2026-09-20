@@ -1,0 +1,9 @@
+expected_action	CONTINUE
+goal	Complete an execution job that explicitly requires repository changes.
+state	A plan and failure catalogue exist, but no repository file has changed and the available implementation steps are not blocked.
+unresolved	Implement and test the highest-value control.
+done_when	The requested repository changes and regression tests are complete.
+history	user	This is an execution job. Do not stop with another work plan.
+history	assistant	I wrote a detailed plan for the changes.
+required_output	implement
+forbidden_output	write a plan

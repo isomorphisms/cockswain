@@ -1,0 +1,8 @@
+expected_action	CONTINUE
+goal	Resolve a failing build without unnecessarily putting the user into the loop.
+state	The current-head check failed. Logs and repository files are available to the worker. The failure has not yet been localized. No credential, policy choice, physical action, or other human-only input is needed to inspect the evidence.
+unresolved	Inspect the failing job and isolate the first meaningful failure.
+unresolved	Determine whether a code or test repair is needed.
+done_when	The failure is repaired and verified, or investigation establishes a genuine external or human-only blocker.
+history	assistant	The build failed, but I have not read the failing logs yet.
+history	user	Have you looked at the obvious things? Keep investigating before you drag me in.

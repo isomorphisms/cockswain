@@ -1,0 +1,36 @@
+{
+  "case_id": "continue-unresolved-acceptance",
+  "expected_action": "CONTINUE",
+  "goal": "Restore a full-system red-screen acceptance path that exercises a real framebuffer device without weakening the evidence boundary.",
+  "source": {
+    "kind": "github_pr",
+    "repository": "example/project",
+    "number": 64
+  },
+  "state": {
+    "pr": "open",
+    "ci": {
+      "boot": "passed",
+      "red_screen": "failed",
+      "failure": "FBDEV_PRESENT=0 PROGRAM_STATUS=125"
+    }
+  },
+  "unresolved": [
+    "No real /dev/fb0 is present in the acceptance guest.",
+    "The red-screen oracle has not executed."
+  ],
+  "done_when": [
+    "Current-head acceptance exposes the required framebuffer device.",
+    "The red-screen oracle executes and passes without relabeling missing-device evidence."
+  ],
+  "chat_history": [
+    {
+      "role": "user",
+      "content": "Help repair the QEMU/kernel/device path so the oracle can exercise a real framebuffer."
+    },
+    {
+      "role": "assistant",
+      "content": "Ubuntu boots successfully, but /dev/fb0 is absent. The next likely boundary is the emulated display device or kernel framebuffer configuration."
+    }
+  ]
+}
