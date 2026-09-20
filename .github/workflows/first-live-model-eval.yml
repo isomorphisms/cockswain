@@ -26,7 +26,7 @@ jobs:
           - label: qwen3-4b-instruct-2507
             model_id: Qwen/Qwen3-4B-Instruct-2507
             hf_repo: bartowski/Qwen_Qwen3-4B-Instruct-2507-GGUF
-            hf_file: Qwen3-4B-Instruct-2507-Q8_0.gguf
+            hf_file: Qwen_Qwen3-4B-Instruct-2507-Q8_0.gguf
             send_reasoning: "0"
             quantization: Q8_0
           - label: ministral-3-8b-instruct-2512
@@ -44,6 +44,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
 
       - name: Record runner and candidate provenance
         env:
@@ -51,11 +54,14 @@ jobs:
           HF_REPO: ${{ matrix.hf_repo }}
           HF_FILE: ${{ matrix.hf_file }}
           QUANTIZATION: ${{ matrix.quantization }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           mkdir -p eval-live
           {
-            echo "base_commit=$(git rev-parse HEAD^ 2>/dev/null || git rev-parse HEAD)"
-            echo "eval_commit=$(git rev-parse HEAD)"
+            echo "base_commit=$BASE_SHA"
+            echo "eval_commit=$HEAD_SHA"
+            echo "checkout_commit=$(git rev-parse HEAD)"
             echo "model_id=$MODEL_ID"
             echo "hf_repo=$HF_REPO"
             echo "hf_file=$HF_FILE"
