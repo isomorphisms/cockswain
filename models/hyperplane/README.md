@@ -3,10 +3,11 @@
 These checkpoints are the first representation-space ladder for Cockswain's
 CONTINUE / WAIT / HUMAN / DONE experiment.
 
-The tracked file `models` is deliberately plain text: one Hugging Face model
-repository per line. Raw model weights live under `.models/hyperplane/` and
-are ignored by Git. Multi-gigabyte checkpoints do not belong in ordinary Git
-history.
+The tracked file `models` is deliberately plain text. Each non-comment row is
+a Hugging Face model repository followed by the exact immutable revision that
+successfully downloaded on GitHub-hosted CI. Raw model weights live under
+`.models/hyperplane/` and are ignored by Git. Multi-gigabyte checkpoints do
+not belong in ordinary Git history.
 
 The initial set is:
 
@@ -40,10 +41,10 @@ To retain all seven locally on a machine with enough disk space:
 sh bin/cockswain-fetch-hyperplane-model --all
 ```
 
-For every requested model the downloader first resolves the current Hugging
-Face model ref to an exact repository revision. The download and its receipt
-therefore refer to the same immutable revision. Receipts are written under
-`.models/hyperplane/receipts/`.
+The downloader refuses model IDs that are not in the tracked manifest and
+downloads only the manifest's pinned revision. Each successful download writes
+a receipt under `.models/hyperplane/receipts/` containing the model ID,
+revision, byte count, and local path.
 
 ## GitHub runner acceptance
 
@@ -51,6 +52,11 @@ therefore refer to the same immutable revision. Receipts are written under
 separate matrix jobs. No job needs all checkpoints on disk at once. Each job
 requires `config.json` plus at least one `.safetensors` or `.bin` weight
 file and uploads only the small exact-revision receipt as a workflow artifact.
+
+The initial unpinned acceptance run completed all seven downloads successfully;
+the revisions recorded by that run are now the tracked pins. Subsequent runs
+therefore verify those exact upstream snapshots rather than whatever happens to
+be at an upstream `main` ref.
 
 This workflow establishes downloadability on a GitHub-hosted runner. It does
 not establish Cockswain model quality or hyperplane separability.
