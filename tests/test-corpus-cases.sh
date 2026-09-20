@@ -168,7 +168,12 @@ for mode in with without; do
     grep -F 'invalid_output	0' "$log" >/dev/null
 done
 
-COCKSWAIN_SUPERVISOR_CMD="$stub" "$repo_dir/bin/cockswain-ablation" "$work/all" > "$work/paired.tsv"
+if ! COCKSWAIN_SUPERVISOR_CMD="$stub" "$repo_dir/bin/cockswain-ablation" "$work/all" > "$work/paired.tsv"; then
+    printf 'FAIL: paired ablation runner failed\n' >&2
+    cat "$work/paired.tsv" >&2
+    exit 1
+fi
+cat "$work/paired.tsv"
 grep -F 'total	20' "$work/paired.tsv" >/dev/null
 grep -F 'required_action_changes_total	13' "$work/paired.tsv" >/dev/null
 grep -F 'required_action_changes_correct	13' "$work/paired.tsv" >/dev/null
