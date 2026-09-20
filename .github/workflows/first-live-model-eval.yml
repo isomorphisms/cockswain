@@ -17,28 +17,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - label: gpt-oss-20b
-            model_id: openai/gpt-oss-20b
-            hf_repo: ggml-org/gpt-oss-20b-GGUF
-            hf_file: gpt-oss-20b-MXFP4.gguf
-            send_reasoning: "1"
-            quantization: MXFP4
-          - label: qwen3-4b-instruct-2507
-            model_id: Qwen/Qwen3-4B-Instruct-2507
-            hf_repo: bartowski/Qwen_Qwen3-4B-Instruct-2507-GGUF
-            hf_file: Qwen_Qwen3-4B-Instruct-2507-Q8_0.gguf
-            send_reasoning: "0"
-            quantization: Q8_0
-          - label: ministral-3-8b-instruct-2512
+          - label: ministral-3-8b-instruct-2512-q4
             model_id: mistralai/Ministral-3-8B-Instruct-2512
             hf_repo: mistralai/Ministral-3-8B-Instruct-2512-GGUF
-            hf_file: Ministral-3-8B-Instruct-2512-Q8_0.gguf
-            send_reasoning: "0"
-            quantization: Q8_0
-          - label: phi-4-reasoning-plus
-            model_id: microsoft/Phi-4-reasoning-plus
-            hf_repo: lmstudio-community/Phi-4-reasoning-plus-GGUF
-            hf_file: Phi-4-reasoning-plus-Q4_K_M.gguf
+            hf_file: Ministral-3-8B-Instruct-2512-Q4_K_M.gguf
             send_reasoning: "0"
             quantization: Q4_K_M
 
