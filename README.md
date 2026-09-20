@@ -11,10 +11,11 @@ Canonical supervisory states:
 
 ## OpenAI developer API mirror
 
-The complete OpenAPI contract published by `openai/openai-openapi` is mirrored
-under `vendor/openai-api/`. `bin/update-openai-api-mirror` fetches an exact
-upstream revision, records SHA-256 receipts, and preserves the upstream MIT
-license. The scheduled workflow keeps the generated mirror current.
+The complete OpenAPI repository published by `openai/openai-openapi` is pinned
+under `vendor/openai-api/upstream`. It contains the machine-readable OpenAI
+REST API contract in YAML and JSON. `vendor/openai-api/UPSTREAM` records the
+exact source revision; `sh bin/update-openai-api-mirror` advances the pinned
+mirror deliberately.
 
 ## Chat-history corpus
 

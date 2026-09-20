@@ -1,25 +1,32 @@
 # OpenAI developer API mirror
 
-This directory vendors the complete OpenAPI 3.1 contract published by
-[openai/openai-openapi](https://github.com/openai/openai-openapi).
+`upstream/` is a pinned Git submodule of
+[openai/openai-openapi](https://github.com/openai/openai-openapi), OpenAI's
+official OpenAPI 3.1 repository.
 
-The upstream project describes this specification as the machine-readable
+The upstream project describes the specification as the machine-readable
 OpenAI REST API contract: endpoints, authentication, parameters, and request
-and response schemas.
+and response schemas. The submodule contains both `openapi.yaml` and
+`openapi.json`, plus the upstream license and repository metadata.
 
-Files:
+`UPSTREAM` repeats the pinned source revision in a small text file so an
+agent can establish provenance without parsing Git internals.
 
-- `openapi.yaml` — generated mirror of the upstream OpenAPI document.
-- `UPSTREAM` — exact upstream Git revision plus SHA-256 receipts.
-- `LICENSE` — the upstream MIT license notice.
+Initialize the mirror after cloning Cockswain:
 
-Do not hand-edit the generated files. Refresh them with:
+```sh
+git submodule update --init -- vendor/openai-api/upstream
+```
+
+Advance it to the current upstream `main` revision with:
 
 ```sh
 sh bin/update-openai-api-mirror
 ```
 
-The mirror intentionally follows the published API contract rather than
-reconstructing it from human-readable documentation. Guides, examples, SDK
-documentation, and ChatGPT product/account UI behavior are not invented as
-API endpoints here.
+Commit the changed submodule pointer and `UPSTREAM` together.
+
+This mirror follows the published API contract rather than reconstructing
+endpoints from prose. Human-readable guides, examples, SDK documentation, and
+ChatGPT product/account UI behavior are not treated as additional API
+endpoints.
