@@ -1,0 +1,4 @@
+[submodule "vendor/openai-api/upstream"]
+	path = vendor/openai-api/upstream
+	url = https://github.com/openai/openai-openapi.git
+	branch = main

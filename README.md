@@ -15,15 +15,19 @@ This repository contains the first executable supervisor/evaluation harness. It 
 
 The public chat corpus under `corpus/chat-history/` is strictly verbatim. Summaries and reconstructed context live under `corpus/derived-context/` and do not count as transcript evidence.
 
+## OpenAI developer API mirror
+
+The complete OpenAPI repository published by `openai/openai-openapi` is pinned under `vendor/openai-api/upstream`. `vendor/openai-api/UPSTREAM` records the exact source revision; `sh bin/update-openai-api-mirror` advances the pinned mirror deliberately.
+
 ## Verbatim corpus evaluation
 
-`tests/corpus/` contains eight independently labeled real-history base cases: two each for `CONTINUE`, `WAIT`, `HUMAN`, and `DONE`. The case files contain objective state and labels, but no copied transcript text. Each `history_record` points to a literal record in `corpus/chat-history/`.
+Current `main` contains 148 literal public-safe messages: 88 user messages and 60 assistant messages.
 
-Two three-message cases also carry a `checkpoint` after every turn. `bin/cockswain-corpus-prefixes` expands those into six prefix cases, so the live corpus evaluation currently exercises 14 work states rather than treating “chunked history” as a box-check.
+`tests/corpus/` contains ten independently labeled real-history base cases. Every action has at least two base cases. Two cases explicitly combine literal user and assistant messages from the same project thread.
 
-Two base cases deliberately have different expected actions after history is removed. Their prefix checkpoints preserve that distinction turn by turn.
+Three cases are history-sensitive: their correct supervisory action changes when the conversation policy/context is ablated. Multi-message cases may also carry `checkpoint` rows. `bin/cockswain-corpus-prefixes` expands those into explicit turn prefixes; the current suite adds ten prefix work states, for 20 public real-history evaluations total.
 
-Run a configured supervisor over the eight base cases plus six turn prefixes:
+Run a configured supervisor over the base cases and turn prefixes:
 
 ```sh
 COCKSWAIN_MODEL='openai/gpt-oss-20b' \
@@ -32,7 +36,7 @@ COCKSWAIN_SEND_REASONING_EFFORT=1 \
 bin/cockswain-corpus-eval
 ```
 
-The deterministic CI test does not claim model quality. It verifies corpus provenance, action coverage, prefix construction, history-sensitive labels, oracle-label isolation, and with/without-history plumbing.
+The deterministic CI test does not claim model quality. It verifies corpus provenance, user/assistant role preservation, action coverage, prefix construction, history-sensitive labels, oracle-label isolation, and with/without-history plumbing.
 
 ## Candidate models
 

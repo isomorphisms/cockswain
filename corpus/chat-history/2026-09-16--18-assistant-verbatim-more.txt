@@ -1,0 +1,63 @@
+record: 001
+date: 2026-09-18T19:32:31Z
+thread: Ish AArch64 physical acceptance
+role: assistant
+---
+That failure is from where I told you to extract it, not from Ish. `~/storage/downloads` is Android shared storage; executables there are effectively non-executable, while the harness’s “missing bin/ish” check is actually `test -x`. The artifact provenance and digest checks already passed.
+===
+
+record: 002
+date: 2026-09-18T19:32:40Z
+thread: Ish AArch64 physical acceptance
+role: assistant
+---
+This is **not an Ish semantic failure**. The verified archive was extracted under Android shared storage, where executables cannot be used normally. The harness reports that poorly: `FAIL missing bin/ish` actually means `test -x bin/ish` failed.
+===
+
+record: 003
+date: 2026-09-17T13:16:59Z
+thread: Batch physical acceptance
+role: assistant
+---
+The batch did exactly what it was supposed to do: it found four independent failures without costing four separate device sessions.
+===
+
+record: 004
+date: 2026-09-17T15:14:20Z
+thread: Tablet GPU acceptance
+role: assistant
+---
+This is a strong tablet result: **everything except the GPU label/gate passed**.
+===
+
+record: 005
+date: 2026-09-18T14:54:46Z
+thread: ncurses tablet acceptance
+role: assistant
+---
+This closes another real gap: **ncurses physical AArch64 private-PTY runtime PASS** on the TAB_P10.
+===
+
+record: 006
+date: 2026-09-16T15:47:06Z
+thread: Tablet acceptance batch
+role: assistant
+---
+PASS: Cat Food runtime installation/migration, Ike, native AArch64 accelerometer. Needs corrected smoke only: Grease, YSH, oils-for-unix. Actual defects exposed: az, abe. Separate probe defect: lshal segfault. GPU: not tested yet.
+===
+
+record: 007
+date: 2026-09-16T15:49:26Z
+thread: Tablet acceptance batch
+role: assistant
+---
+Grease: PASS; YSH: PASS; OSH: PASS; oils-for-unix: PASS; Ike: PASS; Native AArch64 accelerometer: PASS; az: real source bug; abe: real source bug.
+===
+
+record: 008
+date: 2026-09-17T18:01:15Z
+thread: AArch64 native execution
+role: assistant
+---
+This is a clean native execution pass. Both AArch64/Bionic binaries passed all 17/17 cases; only physical-tablet acceptance remained unmarked because `physical_device NOT_ATTESTED` and retained identity evidence was omitted.
+===
