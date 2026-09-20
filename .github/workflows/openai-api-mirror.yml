@@ -1,0 +1,53 @@
+name: Refresh OpenAI developer API mirror
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/openai-api-mirror.yml
+      - bin/update-openai-api-mirror
+  schedule:
+    - cron: '23 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: openai-api-mirror
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Cockswain
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Refresh exact upstream snapshot
+        run: bin/update-openai-api-mirror
+
+      - name: Commit mirror update
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet -- vendor/openai-api; then
+              echo 'OpenAI API mirror is already current.'
+              exit 0
+          fi
+
+          git add vendor/openai-api
+          git diff --cached --check
+
+          revision="$(
+              awk '$1 == "source_revision" { print $2 }'                   vendor/openai-api/UPSTREAM
+          )"
+
+          test -n "$revision"
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m "Refresh OpenAI developer API mirror to ${revision:0:12}"
+          git push origin HEAD:main
