@@ -34,6 +34,10 @@ rationale/prompt/question/evidence text. Current cases cover retained
 constraints, ambiguous merge authorization, execution-versus-planning,
 correction persistence, and QEMU-versus-physical language.
 
+`tests/test-merge-state.sh` covers the non-model merge loop. It consumes ai-ci's
+plain blocker table and proves READY, running CI, physical action, missing
+authority, stale follower, conflict-plus-physical, and genuine ambiguity routing.
+
 ## Dispatch contract
 
 `tests/test-dispatch.sh` defines the controller boundary:

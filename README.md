@@ -43,6 +43,14 @@ repository checks cannot decide. Their contract grades both the supervisory
 action and required/forbidden language, so preserving a QEMU evidence label or
 a retained no-Clang constraint cannot pass on the action label alone.
 
+Merge supervision is deterministic when ai-ci has already produced its blocker
+table. `bin/cockswain-merge-state MERGE-STATE.tsv` maps mechanical work to
+`CONTINUE`, a sole running-CI blocker to `WAIT`, and a sole physical or authority
+boundary to `HUMAN`. `READY` means `CONTINUE` with the recorded merge action;
+the work is not `DONE` until refreshed objective state says the PR actually
+merged. If a physical blocker and a mechanical blocker coexist, Cockswain does
+the mechanical work first instead of summoning the human prematurely.
+
 ## Candidate models
 
 The initial matrix in `models/models.json` is:
