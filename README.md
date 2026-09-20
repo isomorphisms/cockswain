@@ -9,6 +9,13 @@ Canonical supervisory states:
 - `HUMAN` — human judgment, a credential, a physical action, or another genuinely human-only step is required.
 - `DONE` — the stated work is complete, including required cleanup and durable tracking for anything deferred.
 
+## OpenAI developer API mirror
+
+The complete OpenAPI contract published by `openai/openai-openapi` is mirrored
+under `vendor/openai-api/`. `bin/update-openai-api-mirror` fetches an exact
+upstream revision, records SHA-256 receipts, and preserves the upstream MIT
+license. The scheduled workflow keeps the generated mirror current.
+
 ## Chat-history corpus
 
 The first curated seed is in `corpus/chat-history/2026-09-17--19.jsonl`.
