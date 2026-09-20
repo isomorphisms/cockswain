@@ -31,7 +31,7 @@ The evaluator supports `expected_action`, `expected_action_with_history`, and `e
 
 Before invoking the supervisor it removes every expected-action field. Without-history mode also empties `chat_history` and removes transcript-derived `source.history`.
 
-Most cases keep the same action under ablation because objective state is authoritative. Three current base cases deliberately change action because the removed conversation contains a material user policy or ownership constraint that is not present in objective state.
+Most cases keep the same action under ablation because objective state is authoritative. Three current base cases deliberately change action because the removed conversation contains a material user policy or ownership constraint that is not present in objective state.\n\nFor every history-sensitive case, the non-history fields must be **label-neutral**: `goal`, `state`, `unresolved`, and `done_when` must not restate the policy or ownership fact that is supposed to disappear during ablation. Otherwise the ablation oracle is internally contradictory. This is a semantic review requirement in addition to the deterministic plumbing tests.
 
 ## Initial model matrix
 
