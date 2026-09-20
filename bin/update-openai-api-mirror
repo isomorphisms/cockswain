@@ -1,0 +1,48 @@
+#!/bin/sh
+set -eu
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "$script_dir/.." && pwd)
+submodule_path="$repo_root/vendor/openai-api/upstream"
+upstream_file="$repo_root/vendor/openai-api/UPSTREAM"
+
+git -C "$repo_root" submodule sync -- vendor/openai-api/upstream
+git -C "$repo_root" submodule update --init -- vendor/openai-api/upstream
+
+git -C "$submodule_path" fetch --quiet origin refs/heads/main
+upstream_sha=$(git -C "$submodule_path" rev-parse FETCH_HEAD)
+
+case "$upstream_sha" in
+    ''|*[!0-9a-f]*)
+        printf 'invalid upstream revision: %s\n' "$upstream_sha" >&2
+        exit 1
+        ;;
+esac
+
+if [ "${#upstream_sha}" -ne 40 ]; then
+    printf 'invalid upstream revision length: %s\n' "$upstream_sha" >&2
+    exit 1
+fi
+
+git -C "$submodule_path" checkout --quiet --detach "$upstream_sha"
+
+if ! grep -Eq '^openapi:[[:space:]]*3\.1([.]|[[:space:]]|$)' \
+    "$submodule_path/openapi.yaml"
+then
+    printf 'upstream openapi.yaml does not declare OpenAPI 3.1\n' >&2
+    exit 1
+fi
+
+test -f "$submodule_path/openapi.json"
+test -f "$submodule_path/LICENSE"
+
+cat > "$upstream_file" <<EOF
+source_repository https://github.com/openai/openai-openapi
+source_revision $upstream_sha
+openapi_yaml upstream/openapi.yaml
+openapi_json upstream/openapi.json
+license upstream/LICENSE
+EOF
+
+printf 'OpenAI developer API mirror now points to %s\n' "$upstream_sha"
+printf '%s\n' 'Review and commit vendor/openai-api/upstream and vendor/openai-api/UPSTREAM.'

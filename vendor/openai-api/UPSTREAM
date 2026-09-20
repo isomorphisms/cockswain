@@ -1,0 +1,5 @@
+source_repository https://github.com/openai/openai-openapi
+source_revision ddface9bd361f5fe37943291d23ee2ca72cbcc2b
+openapi_yaml upstream/openapi.yaml
+openapi_json upstream/openapi.json
+license upstream/LICENSE
