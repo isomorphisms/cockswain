@@ -1,28 +1,16 @@
 #!/bin/sh
 set -eu
-
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repo_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
 case_root=${1:-"$repo_dir/tests/corpus"}
-
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT HUP INT TERM
 mkdir -p "$work/cases"
-
 "$script_dir/cockswain-corpus-cases" "$case_root" "$work/cases"
 "$script_dir/cockswain-corpus-prefixes" "$case_root" "$work/cases"
-
 requested_mode=${COCKSWAIN_HISTORY_MODE:-both}
 case "$requested_mode" in
-    both) modes='with without' ;;
-    with|without) modes=$requested_mode ;;
-    *)
-        printf 'cockswain: COCKSWAIN_HISTORY_MODE must be with, without, or both\n' >&2
-        exit 64
-        ;;
+    both) "$script_dir/cockswain-ablation" "$work/cases" ;;
+    with|without) COCKSWAIN_HISTORY_MODE=$requested_mode "$script_dir/cockswain-eval" "$work/cases" ;;
+    *) printf 'cockswain: COCKSWAIN_HISTORY_MODE must be with, without, or both\n' >&2; exit 64 ;;
 esac
-
-for mode in $modes; do
-    printf 'corpus_history_mode\t%s\n' "$mode"
-    COCKSWAIN_HISTORY_MODE=$mode "$script_dir/cockswain-eval" "$work/cases"
-done

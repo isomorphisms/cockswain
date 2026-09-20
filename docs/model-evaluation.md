@@ -37,7 +37,7 @@ Most cases keep the same action under ablation because objective state is author
 
 The model manifest is `models/models.json`. Every model should use the deepest reasoning mode its runtime exposes.
 
-`bin/cockswain-eval-matrix CASE_DIR` runs every manifest model in both history modes, records false-DONE, false-HUMAN, accuracy, and invalid output, and writes ignored results under `eval/results/`.
+`bin/cockswain-ablation CASE_DIR` pairs each case's with-history and without-history result. It reports required decision changes, missed required changes, stable pairs, and spurious decision changes.\n\n`bin/cockswain-eval-matrix CASE_DIR` runs every manifest model in both history modes. The paired ablation report is the stricter check for whether history changes decisions only when it should.
 
 ## Promotion boundaries
 

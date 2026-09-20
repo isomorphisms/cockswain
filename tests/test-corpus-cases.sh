@@ -168,4 +168,13 @@ for mode in with without; do
     grep -F 'invalid_output	0' "$log" >/dev/null
 done
 
-printf 'PASS: verbatim corpus, two-sided history, turn prefixes, and ablation contract\n'
+COCKSWAIN_SUPERVISOR_CMD="$stub" "$repo_dir/bin/cockswain-ablation" "$work/all" > "$work/paired.tsv"
+grep -F 'total	20' "$work/paired.tsv" >/dev/null
+grep -F 'required_action_changes_total	13' "$work/paired.tsv" >/dev/null
+grep -F 'required_action_changes_correct	13' "$work/paired.tsv" >/dev/null
+grep -F 'missed_required_action_changes	0' "$work/paired.tsv" >/dev/null
+grep -F 'stable_action_total	7' "$work/paired.tsv" >/dev/null
+grep -F 'stable_action_correct	7' "$work/paired.tsv" >/dev/null
+grep -F 'spurious_action_changes	0' "$work/paired.tsv" >/dev/null
+
+printf 'PASS: verbatim corpus, two-sided history, turn prefixes, and paired ablation contract\n'
