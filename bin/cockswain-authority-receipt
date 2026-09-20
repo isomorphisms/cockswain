@@ -46,6 +46,7 @@ text_sha=$(required "$decision_file" authority_text_sha256)
 context_ref=$(required "$decision_file" authority_context_ref)
 context_sha=$(required "$decision_file" authority_context_sha256)
 context_state=$(required "$decision_file" authority_context_state)
+decision_classifier_revision=$(required "$decision_file" classifier_revision)
 contract_sha=$(required "$decision_file" classifier_contract_sha256)
 classified_scope_sha=$(required "$decision_file" classified_scope_sha256)
 scope_state=$(required "$decision_file" scope_state)
@@ -58,6 +59,11 @@ pr=$(required "$target_file" pr)
 title=$(required "$target_file" title)
 target_scope_sha=$(required "$target_file" scope_sha256)
 classifier_revision=$(required "$target_file" classifier_revision)
+
+[ "$decision_classifier_revision" = "$classifier_revision" ] || {
+    echo 'cockswain: classifier revision differs between decision and target' >&2
+    exit 65
+}
 
 case $classification in AUTHORIZED|NOT_AUTHORIZED|UNKNOWN) ;; *) echo 'cockswain: invalid authority classification' >&2; exit 65 ;; esac
 case $authorization_kind in explicit-merge|conditional-clean|github-approval|task-context) ;; *) echo 'cockswain: invalid authorization kind' >&2; exit 65 ;; esac

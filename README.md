@@ -55,6 +55,18 @@ digests, classifier revision/contract, authorized task scope, revocation, and
 objection state. It emits no GitHub head, base, check, diff, or evidence claim;
 those remain ai-ci's boundary.
 
+`bin/cockswain-authority-collect CONTEXT_REF CONTEXT_TSV STATE_TSV INTENT_FILE
+CHANGED_PATHS OUTPUT` is the ordinary live path from recovered private task
+context to that receipt. `CONTEXT_TSV` has the plain-text header
+`record_id<TAB>role<TAB>text`. Cockswain validates the current ai-ci intent and
+changed-path digests, asks the configured classifier only for semantic fields,
+then derives the authority text hash, whole-context hash, latest record, exact
+classifier revision, and prompt-contract hash itself. A nominated source must
+exist in the recovered context and be human; acknowledgement-only sources and
+assistant sources cannot authorize a merge. Missing context emits `UNKNOWN`
+without reconstructing an earlier task. Private message text is not copied into
+the public receipt.
+
 Merge supervision is deterministic when ai-ci has already produced its blocker
 table. `bin/cockswain-merge-state MERGE-STATE.tsv` maps mechanical work to
 `CONTINUE`, a sole running-CI blocker to `WAIT`, and a sole physical or authority

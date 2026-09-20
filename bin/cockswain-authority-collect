@@ -1,0 +1,62 @@
+#!/bin/sh
+set -eu
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+[ "$#" -eq 6 ] || {
+    echo 'usage: cockswain-authority-collect CONTEXT_REF CONTEXT_TSV STATE_TSV INTENT_FILE CHANGED_PATHS OUTPUT' >&2
+    exit 64
+}
+
+context_ref=$1
+context_file=$2
+state_file=$3
+intent_file=$4
+changed_paths_file=$5
+output=$6
+
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT HUP INT TERM
+
+"$script_dir/cockswain-authority-decision" \
+    "$context_ref" "$context_file" "$state_file" "$intent_file" "$changed_paths_file" \
+    "$work/decision.tsv"
+
+read_value() {
+    file=$1 key=$2
+    awk -F '\t' -v wanted="$key" '
+        $1==wanted { if (found++) exit 2; value=$2 }
+        END { if (found!=1) exit 1; print value }
+    ' "$file"
+}
+
+required() {
+    value=$(read_value "$1" "$2") || {
+        printf 'cockswain: missing or duplicate %s in %s\n' "$2" "$1" >&2
+        exit 65
+    }
+    printf '%s\n' "$value"
+}
+
+[ "$(required "$state_file" schema)" = aici-merge-state-v4 ] || {
+    echo 'cockswain: unsupported ai-ci merge-state schema' >&2
+    exit 65
+}
+
+repository=$(required "$state_file" repository)
+pr=$(required "$state_file" pr)
+title=$(required "$state_file" title)
+scope_sha=$(required "$state_file" current_scope_sha256)
+classifier_revision=$(required "$work/decision.tsv" classifier_revision)
+
+cat > "$work/target.tsv" <<EOF
+schema	cockswain-merge-authority-target-v1
+repository	$repository
+pr	$pr
+title	$title
+scope_sha256	$scope_sha
+classifier_revision	$classifier_revision
+EOF
+
+"$script_dir/cockswain-authority-receipt" \
+    "$work/decision.tsv" "$work/target.tsv" "$output"
