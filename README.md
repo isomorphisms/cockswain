@@ -50,6 +50,10 @@ boundary to `HUMAN`. `READY` means `CONTINUE` with the recorded merge action;
 the work is not `DONE` until refreshed objective state says the PR actually
 merged. If a physical blocker and a mechanical blocker coexist, Cockswain does
 the mechanical work first instead of summoning the human prematurely.
+Draft routing follows the declared promotion action: `mark-ready` continues,
+`wait`/`hold-draft` waits, and an unrecognized owner decision escalates. A green
+draft therefore does not remain stuck after its promotion condition is met,
+while an intentional evaluation draft is not churned as repair work.
 
 ## Candidate models
 

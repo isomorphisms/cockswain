@@ -31,6 +31,15 @@ run_case physical HUMAN PHYSICAL_EXECUTION_REQUIRED \
 run_case authorization HUMAN HUMAN_AUTHORIZATION_REQUIRED \
     "BLOCKED\tHUMAN_AUTHORIZATION_REQUIRED\tauthorization\tapproval.tsv\t$H\trecord-authorization\tstate=missing"
 
+run_case promotable-draft CONTINUE DRAFT \
+    "BLOCKED\tDRAFT\tpr\tisomorphisms/example#17\t$H\tmark-ready\tcondition=all-required-evidence"
+
+run_case held-draft WAIT DRAFT \
+    "BLOCKED\tDRAFT\tpromotion\texperiment-complete\t$H\thold-draft\tstate=HOLD"
+
+run_case decision-draft HUMAN DRAFT \
+    "BLOCKED\tDRAFT\tpromotion\tproduct-decision\t$H\task-owner\tstate=HOLD"
+
 run_case stale-follower CONTINUE FOLLOWER_STALE \
     "BLOCKED\tFOLLOWER_STALE\tfollower\tcatfood#69-phone\t$H\tsupersede-or-reconcile\told-trigger=old"
 

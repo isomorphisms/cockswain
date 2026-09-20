@@ -34,7 +34,18 @@ NF!=7 || ($1!="READY" && $1!="BLOCKED") {
         next
     }
     blocked++
-    if ($2=="PHYSICAL_EXECUTION_REQUIRED" || $2=="HUMAN_AUTHORIZATION_REQUIRED") {
+    if ($2=="DRAFT") {
+        if ($6=="mark-ready") {
+            mechanical++
+            if (mechanical_row=="") mechanical_row=$0
+        } else if ($6=="wait" || $6=="hold-draft") {
+            waiting++
+            if (wait_row=="") wait_row=$0
+        } else {
+            human++
+            if (human_row=="") human_row=$0
+        }
+    } else if ($2=="PHYSICAL_EXECUTION_REQUIRED" || $2=="HUMAN_AUTHORIZATION_REQUIRED") {
         human++
         if (human_row=="") human_row=$0
     } else if ($2=="CI_PENDING") {
