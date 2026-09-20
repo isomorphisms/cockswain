@@ -28,8 +28,8 @@ Install `huggingface_hub` so its `hf` command is available, then fetch one
 or more checkpoints:
 
 ```sh
-bin/cockswain-fetch-hyperplane-model Qwen/Qwen3-0.6B
-bin/cockswain-fetch-hyperplane-model \
+sh bin/cockswain-fetch-hyperplane-model Qwen/Qwen3-0.6B
+sh bin/cockswain-fetch-hyperplane-model \
     allenai/OLMo-2-0425-1B \
     allenai/OLMo-2-0425-1B-SFT
 ```
@@ -37,7 +37,7 @@ bin/cockswain-fetch-hyperplane-model \
 To retain all seven locally on a machine with enough disk space:
 
 ```sh
-bin/cockswain-fetch-hyperplane-model --all
+sh bin/cockswain-fetch-hyperplane-model --all
 ```
 
 For every requested model the downloader first resolves the current Hugging
