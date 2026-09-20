@@ -7,3 +7,6 @@ done_when	The human performs the reserved backend work or explicitly changes tha
 history_record	corpus/chat-history/2026-08-29--09-19-verbatim-more.txt	018
 history_record	corpus/chat-history/2026-08-29--09-19-verbatim-more.txt	019
 history_record	corpus/chat-history/2026-08-29--09-19-verbatim-more.txt	020
+checkpoint	1	HUMAN	CONTINUE
+checkpoint	2	HUMAN	CONTINUE
+checkpoint	3	HUMAN	CONTINUE

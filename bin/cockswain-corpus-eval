@@ -10,6 +10,7 @@ trap 'rm -rf "$work"' EXIT HUP INT TERM
 mkdir -p "$work/cases"
 
 "$script_dir/cockswain-corpus-cases" "$case_root" "$work/cases"
+"$script_dir/cockswain-corpus-prefixes" "$case_root" "$work/cases"
 
 requested_mode=${COCKSWAIN_HISTORY_MODE:-both}
 case "$requested_mode" in

@@ -7,3 +7,6 @@ done_when	The existing worker receives the next useful prompt or reaches a real 
 history_record	corpus/chat-history/2026-08-29--09-19-verbatim-more.txt	004
 history_record	corpus/chat-history/2026-08-29--09-19-verbatim-more.txt	005
 history_record	corpus/chat-history/2026-08-29--09-19-verbatim-more.txt	006
+checkpoint	1	CONTINUE	HUMAN
+checkpoint	2	CONTINUE	HUMAN
+checkpoint	3	CONTINUE	HUMAN

@@ -1,0 +1,76 @@
+#!/bin/sh
+set -eu
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
+case_root=${1:-"$repo_dir/tests/corpus"}
+out_dir=${2:-}
+
+[ -n "$out_dir" ] || {
+    printf 'usage: %s [CASE_DIR] OUTPUT_DIR\n' "$0" >&2
+    exit 64
+}
+
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT HUP INT TERM
+mkdir -p "$work/full" "$out_dir"
+
+"$script_dir/cockswain-corpus-cases" "$case_root" "$work/full"
+
+found=0
+for case_path in "$case_root"/*.case; do
+    [ -f "$case_path" ] || continue
+    case_id=$(basename "$case_path" .case)
+    full_case="$work/full/$case_id.json"
+    max=$(jq -r '.chat_history | length' "$full_case")
+
+    while IFS="$(printf '\t')" read -r key upto expected_with expected_without extra; do
+        [ "$key" = checkpoint ] || continue
+        found=1
+
+        [ -z "${extra:-}" ] || {
+            printf 'cockswain: %s has malformed checkpoint\n' "$case_id" >&2
+            exit 65
+        }
+        case "$upto" in
+            ''|*[!0-9]*)
+                printf 'cockswain: %s has invalid checkpoint length: %s\n' "$case_id" "$upto" >&2
+                exit 65
+                ;;
+        esac
+        [ "$upto" -ge 1 ] && [ "$upto" -le "$max" ] || {
+            printf 'cockswain: %s checkpoint %s exceeds history length %s\n' "$case_id" "$upto" "$max" >&2
+            exit 65
+        }
+
+        [ -n "$expected_without" ] || expected_without=$expected_with
+        for expected in "$expected_with" "$expected_without"; do
+            case "$expected" in
+                CONTINUE|WAIT|HUMAN|DONE) ;;
+                *)
+                    printf 'cockswain: %s checkpoint %s has invalid expected action\n' "$case_id" "$upto" >&2
+                    exit 65
+                    ;;
+            esac
+        done
+
+        prefix_id="$case_id--turn-$upto"
+        jq \
+            --arg prefix_id "$prefix_id" \
+            --arg expected_with "$expected_with" \
+            --arg expected_without "$expected_without" \
+            --argjson upto "$upto" '
+              .case_id = $prefix_id
+              | .expected_action = $expected_with
+              | .expected_action_with_history = $expected_with
+              | .expected_action_without_history = $expected_without
+              | .chat_history = .chat_history[:$upto]
+              | .source.history.records = .source.history.records[:$upto]
+            ' "$full_case" > "$out_dir/$prefix_id.json"
+    done < "$case_path"
+done
+
+[ "$found" -eq 1 ] || {
+    printf 'cockswain: no checkpoint entries found under %s\n' "$case_root" >&2
+    exit 65
+}

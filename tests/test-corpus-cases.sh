@@ -11,43 +11,71 @@ command -v jq >/dev/null 2>&1 || {
 
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT HUP INT TERM
-mkdir -p "$work/cases"
+mkdir -p "$work/base" "$work/prefixes" "$work/all"
 
-"$repo_dir/bin/cockswain-corpus-cases" "$repo_dir/tests/corpus" "$work/cases"
+"$repo_dir/bin/cockswain-corpus-cases" "$repo_dir/tests/corpus" "$work/base"
+"$repo_dir/bin/cockswain-corpus-prefixes" "$repo_dir/tests/corpus" "$work/prefixes"
 
-count=$(find "$work/cases" -type f -name '*.json' | wc -l | tr -d ' ')
-[ "$count" -eq 8 ] || {
-    printf 'FAIL: expected 8 corpus cases, got %s\n' "$count" >&2
+base_count=$(find "$work/base" -type f -name '*.json' | wc -l | tr -d ' ')
+[ "$base_count" -eq 8 ] || {
+    printf 'FAIL: expected 8 base corpus cases, got %s\n' "$base_count" >&2
     exit 1
 }
 
+prefix_count=$(find "$work/prefixes" -type f -name '*.json' | wc -l | tr -d ' ')
+[ "$prefix_count" -eq 6 ] || {
+    printf 'FAIL: expected 6 turn-prefix checkpoints, got %s\n' "$prefix_count" >&2
+    exit 1
+}
+
+cp "$work/base"/*.json "$work/all/"
+cp "$work/prefixes"/*.json "$work/all/"
+
 for action in CONTINUE WAIT HUMAN DONE; do
-    with_count=$(jq -s --arg action "$action" '[.[] | select(.expected_action_with_history == $action)] | length' "$work"/cases/*.json)
-    without_count=$(jq -s --arg action "$action" '[.[] | select(.expected_action_without_history == $action)] | length' "$work"/cases/*.json)
+    with_count=$(jq -s --arg action "$action" '[.[] | select(.expected_action_with_history == $action)] | length' "$work"/base/*.json)
+    without_count=$(jq -s --arg action "$action" '[.[] | select(.expected_action_without_history == $action)] | length' "$work"/base/*.json)
     [ "$with_count" -ge 2 ] || {
-        printf 'FAIL: with-history corpus has fewer than two %s cases\n' "$action" >&2
+        printf 'FAIL: with-history base corpus has fewer than two %s cases\n' "$action" >&2
         exit 1
     }
     [ "$without_count" -ge 2 ] || {
-        printf 'FAIL: without-history corpus has fewer than two %s cases\n' "$action" >&2
+        printf 'FAIL: without-history base corpus has fewer than two %s cases\n' "$action" >&2
         exit 1
     }
 done
 
-sensitive=$(jq -s '[.[] | select(.expected_action_with_history != .expected_action_without_history)] | length' "$work"/cases/*.json)
+sensitive=$(jq -s '[.[] | select(.expected_action_with_history != .expected_action_without_history)] | length' "$work"/base/*.json)
 [ "$sensitive" -ge 2 ] || {
-    printf 'FAIL: expected at least two history-sensitive cases\n' >&2
+    printf 'FAIL: expected at least two history-sensitive base cases\n' >&2
     exit 1
 }
 
-chunked=$(jq -s '[.[] | select((.source.history.records | length) >= 2)] | length' "$work"/cases/*.json)
+chunked=$(jq -s '[.[] | select((.source.history.records | length) >= 2)] | length' "$work"/base/*.json)
 [ "$chunked" -ge 2 ] || {
     printf 'FAIL: expected at least two multi-record history chunks\n' >&2
     exit 1
 }
 
+for case_id in continue-cockswain-no-bookkeeping human-arm-thumb-reserved; do
+    for turn in 1 2 3; do
+        path="$work/prefixes/$case_id--turn-$turn.json"
+        [ -f "$path" ] || {
+            printf 'FAIL: missing prefix checkpoint %s turn %s\n' "$case_id" "$turn" >&2
+            exit 1
+        }
+        [ "$(jq -r '.chat_history | length' "$path")" -eq "$turn" ] || {
+            printf 'FAIL: prefix checkpoint %s turn %s has wrong history length\n' "$case_id" "$turn" >&2
+            exit 1
+        }
+        [ "$(jq -r '.source.history.records | length' "$path")" -eq "$turn" ] || {
+            printf 'FAIL: prefix checkpoint %s turn %s has wrong provenance length\n' "$case_id" "$turn" >&2
+            exit 1
+        }
+    done
+done
+
 if grep -R -n '^history[[:space:]]' "$repo_dir/tests/corpus" >/dev/null 2>&1; then
-    printf 'FAIL: corpus case labels must reference history_record entries, not copied transcript text\n' >&2
+    printf 'FAIL: corpus labels must reference history_record entries, not copied transcript text\n' >&2
     exit 1
 fi
 
@@ -82,10 +110,10 @@ else
 fi
 
 case "$case_id:$history_count" in
-    continue-cockswain-no-bookkeeping:0) action=HUMAN ;;
-    continue-cockswain-no-bookkeeping:*) action=CONTINUE ;;
-    human-arm-thumb-reserved:0) action=CONTINUE ;;
-    human-arm-thumb-reserved:*) action=HUMAN ;;
+    continue-cockswain-no-bookkeeping*:0) action=HUMAN ;;
+    continue-cockswain-no-bookkeeping*:*) action=CONTINUE ;;
+    human-arm-thumb-reserved*:0) action=CONTINUE ;;
+    human-arm-thumb-reserved*:*) action=HUMAN ;;
     continue-dont-give-up:*) action=CONTINUE ;;
     wait-grease-current-head-ci:*) action=WAIT ;;
     wait-merge-ci:*) action=WAIT ;;
@@ -121,12 +149,12 @@ chmod +x "$stub"
 for mode in with without; do
     log="$work/$mode.log"
     COCKSWAIN_SUPERVISOR_CMD="$stub" COCKSWAIN_HISTORY_MODE="$mode" \
-        "$repo_dir/bin/cockswain-eval" "$work/cases" > "$log"
-    grep -F 'total	8' "$log" >/dev/null
-    grep -F 'correct	8' "$log" >/dev/null
+        "$repo_dir/bin/cockswain-eval" "$work/all" > "$log"
+    grep -F 'total	14' "$log" >/dev/null
+    grep -F 'correct	14' "$log" >/dev/null
     grep -F 'false_done	0' "$log" >/dev/null
     grep -F 'false_human	0' "$log" >/dev/null
     grep -F 'invalid_output	0' "$log" >/dev/null
 done
 
-printf 'PASS: verbatim corpus coverage and history ablation contract\n'
+printf 'PASS: verbatim corpus coverage, turn prefixes, and history ablation contract\n'

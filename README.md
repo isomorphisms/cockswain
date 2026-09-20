@@ -17,11 +17,13 @@ The public chat corpus under `corpus/chat-history/` is strictly verbatim. Summar
 
 ## Verbatim corpus evaluation
 
-`tests/corpus/` contains eight labeled real-history cases: two each for `CONTINUE`, `WAIT`, `HUMAN`, and `DONE`. The case files contain objective state and labels, but no copied transcript text. Each `history_record` line points to a literal record in `corpus/chat-history/`, and `bin/cockswain-corpus-cases` extracts those messages into temporary work items.
+`tests/corpus/` contains eight independently labeled real-history base cases: two each for `CONTINUE`, `WAIT`, `HUMAN`, and `DONE`. The case files contain objective state and labels, but no copied transcript text. Each `history_record` points to a literal record in `corpus/chat-history/`.
 
-Two cases deliberately have different expected actions after history is removed. This makes history ablation test a decision boundary instead of merely testing that tokens were deleted.
+Two three-message cases also carry a `checkpoint` after every turn. `bin/cockswain-corpus-prefixes` expands those into six prefix cases, so the live corpus evaluation currently exercises 14 work states rather than treating “chunked history” as a box-check.
 
-Run one configured supervisor model against both history modes:
+Two base cases deliberately have different expected actions after history is removed. Their prefix checkpoints preserve that distinction turn by turn.
+
+Run a configured supervisor over the eight base cases plus six turn prefixes:
 
 ```sh
 COCKSWAIN_MODEL='openai/gpt-oss-20b' \
@@ -30,7 +32,7 @@ COCKSWAIN_SEND_REASONING_EFFORT=1 \
 bin/cockswain-corpus-eval
 ```
 
-The deterministic CI test does not claim model quality. It verifies corpus provenance, action coverage, history-sensitive labels, label isolation, and with/without-history plumbing.
+The deterministic CI test does not claim model quality. It verifies corpus provenance, action coverage, prefix construction, history-sensitive labels, oracle-label isolation, and with/without-history plumbing.
 
 ## Candidate models
 

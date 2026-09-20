@@ -13,11 +13,17 @@ Latency is diagnostic only.
 
 ## Verbatim public corpus
 
-`tests/corpus/` is the first real-history regression set. The labels are plain tab-delimited files. They do not contain copied transcript text; each `history_record` points into the strictly verbatim files under `corpus/chat-history/`.
+`tests/corpus/` is the first real-history regression set. The label files do not contain copied transcript text; each `history_record` points into the strictly verbatim files under `corpus/chat-history/`.
 
-`bin/cockswain-corpus-cases` builds temporary JSON work items for the existing supervisor boundary. The current set contains eight cases, two for each action with history. It also retains at least two cases where the correct action changes when history is removed, so ablation tests whether conversation context changes the decision in a justified way.
+The base set contains eight cases, two for each action. `bin/cockswain-corpus-cases` materializes those work items.
 
-`bin/cockswain-corpus-eval` runs a configured model over both modes.
+A multi-record case may also contain rows of the form:
+
+`checkpoint<TAB>N<TAB>WITH_ACTION<TAB>WITHOUT_ACTION`
+
+`bin/cockswain-corpus-prefixes` materializes the first N literal messages as a separate evaluation work item. The initial corpus has checkpoints after every message of two three-message conversations, adding six turn-prefix states. `bin/cockswain-corpus-eval` runs both the eight base cases and those six prefixes.
+
+This is the intended chunk test: ask the supervisor again as history grows one literal turn at a time, rather than evaluating only the final excerpt.
 
 ## History ablation
 
@@ -37,14 +43,17 @@ The model manifest is `models/models.json`. Every model should use the deepest r
 
 `bin/cockswain-eval-matrix CASE_DIR` runs every manifest model in both history modes, records false-DONE, false-HUMAN, accuracy, and invalid output, and writes local ignored results under `eval/results/`.
 
+To evaluate the same 14 public real-history states with the matrix, materialize the base and prefix cases into one directory first.
+
 ## Promotion boundaries
 
 The harness itself can be promoted when deterministic tests prove that:
 
 - real verbatim records are extracted rather than rewritten into fixtures;
 - CONTINUE, WAIT, HUMAN, and DONE are each represented repeatedly;
-- history chunks and history-sensitive ablation cases are represented;
-- expected labels are never sent to the supervisor;
+- multi-message chunks are evaluated at explicit turn prefixes;
+- history-sensitive ablation cases are represented;
+- expected labels never reach the supervisor;
 - without-history runs actually remove transcript content and transcript provenance.
 
 That is a software-harness claim, not a model-quality claim.
