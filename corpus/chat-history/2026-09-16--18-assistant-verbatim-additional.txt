@@ -1,0 +1,85 @@
+record: 001
+date: 2026-09-16T19:44:26Z
+thread: Grease phone acceptance
+role: assistant
+---
+Yes. **The Grease-on-phone boundary passed.** You now have physical evidence that the exact Cat Food-pinned artifact `9b2500ce...` downloads with the expected SHA-256, installs on a real `armeabi-v7a` Android device, and actually executes Grease syntax. The second update also proves the installation is stable/idempotent rather than a one-off. I recorded that receipt on Grease PR #12. `ike` and `icu` being `PENDING` are separate. They do **not** weaken the Grease result. The next boundary is now much narrower: **run an actual IB `.grease` program with this runtime on the phone.** We should do that before touching ICU, using a local/non-network IB script so we prove:
+```text
+physical ARMv7
+→ real Grease
+→ real IB Grease program
+```
+Then ICU becomes the next dependency for the live `URL → acquisition → prepaint` path.
+===
+
+record: 002
+date: 2026-09-17T15:14:20Z
+thread: Tablet GPU acceptance
+role: assistant
+---
+This is a strong tablet result: **everything except the GPU label/gate passed**. The GPU itself did not fail—the tablet executed all six shaders and all six framebuffer/readback checks successfully; the harness failed because it demanded PowerVR/Imagination while this tablet reports **ARM Mali-G57**.
+===
+
+record: 003
+date: 2026-09-18T02:24:47Z
+thread: Grease PR #12 closeout
+role: assistant
+---
+Done. Grease PR #12, “Build a verified ARMv7 Grease runtime for phone Cat Food,” merged to `main` at `24e5bdf7…`; exact physical-phone receipt recorded for tested head `5ff32e220844…`, archive `7f2dce33…`; PR #14 rebased and Cat Food PR #50’s stale ARMv7 Grease pin corrected.
+===
+
+record: 004
+date: 2026-09-18T02:34:36Z
+thread: Grease ARMv7 closeout
+role: assistant
+---
+The ARMv7 Grease phone path is now closed cleanly.
+===
+
+record: 005
+date: 2026-09-18T02:38:13Z
+thread: Idric-Net to ICU clean-host proof
+role: assistant
+---
+Idric-Net → ICU dependency path proved on clean Ubuntu at Cat Food PR #50 head `df9b86b7…`; ICU consumed installed `idric_net`; later failure was unrelated manifest-policy errors in `wegert` and `computer-science`.
+===
+
+record: 006
+date: 2026-09-18T13:57:59Z
+thread: Merge backlog sweep
+role: assistant
+---
+I’ll sweep the currently open non-draft PRs, focus first on ones that were waiting only on CI, verify the current head and checks, and merge only those that are clean and fully green.
+===
+
+record: 007
+date: 2026-09-18T11:07:55Z
+thread: Open PR audit
+role: assistant
+---
+Audit complete. I started at **38 non-draft open PRs**, merged **4**, and the current count is **34**.
+===
+
+record: 008
+date: 2026-09-18T15:07:30Z
+thread: Storage guidance
+role: assistant
+---
+Done and merged: ai-ci PR #123 scoped storage facts to exact device; Cat Food PR #54 recorded phone/tablet storage guidance in `AGENTS.md`, including tablet Downloads `/storage/emulated/0/Download`, no `external-1`, no established SD card, and `noexec`.
+===
+
+record: 009
+date: 2026-09-18T17:35:34Z
+thread: Mali-G57 GLES acceptance
+role: assistant
+---
+Clean pass: physical `TAB_P10` ARM Mali-G57 executed generated `fullscreen.vert` + `sphere.frag` under OpenGL ES 3.2; 256/256 pixels matched CPU oracle, maximum channel error 0; receipt, framebuffer, sources, device record, and hashes retained. Evidence boundary excludes Idriç compiler execution and all shader/backend paths.
+===
+
+record: 010
+date: 2026-09-18T15:39:31Z
+thread: AArch64 follower closeout
+role: assistant
+---
+#86 — DONE / MERGED / host + emulator + physical ARMv7 + physical AArch64 established; extra hypothetical AArch64 runtime combinations correctly made conditional; downstream consumers tracked separately.
+===
