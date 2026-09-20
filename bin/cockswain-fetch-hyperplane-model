@@ -1,0 +1,95 @@
+#!/bin/sh
+set -eu
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
+manifest="$repo_dir/models/hyperplane/models"
+store=${COCKSWAIN_MODEL_STORE:-"$repo_dir/.models/hyperplane"}
+
+usage() {
+    printf 'usage: %s MODEL_ID...\n       %s --all\n' "$0" "$0" >&2
+    exit 64
+}
+
+[ "$#" -gt 0 ] || usage
+
+if [ "$1" = "--all" ]; then
+    [ "$#" -eq 1 ] || usage
+    set --
+    while IFS= read -r model; do
+        case "$model" in
+            ''|'#'*) continue ;;
+        esac
+        set -- "$@" "$model"
+    done < "$manifest"
+fi
+
+command -v python3 >/dev/null 2>&1 || {
+    printf 'cockswain: python3 is required\n' >&2
+    exit 69
+}
+command -v hf >/dev/null 2>&1 || {
+    printf 'cockswain: Hugging Face CLI "hf" is required; install huggingface_hub\n' >&2
+    exit 69
+}
+
+mkdir -p "$store/receipts"
+
+for model in "$@"; do
+    if ! grep -Fqx -- "$model" "$manifest"; then
+        printf 'cockswain: model is not in %s: %s\n' "$manifest" "$model" >&2
+        exit 64
+    fi
+
+    revision=$(python3 - "$model" <<'PY'
+import sys
+from huggingface_hub import model_info
+
+info = model_info(sys.argv[1], files_metadata=False)
+if not info.sha:
+    raise SystemExit("model has no resolved revision")
+print(info.sha)
+PY
+)
+
+    slug=$(printf '%s' "$model" | tr '/:' '__')
+    dest="$store/$slug"
+    tmp="$dest.tmp"
+    receipt="$store/receipts/$slug"
+
+    rm -rf "$tmp"
+    mkdir -p "$tmp"
+
+    printf 'cockswain: downloading %s at %s\n' "$model" "$revision"
+    hf download "$model" --revision "$revision" --local-dir "$tmp"
+
+    test -s "$tmp/config.json"
+    if ! find "$tmp" -type f \( -name '*.safetensors' -o -name '*.bin' \) -print -quit | grep -q .; then
+        printf 'cockswain: downloaded snapshot has no model weights: %s\n' "$model" >&2
+        exit 65
+    fi
+
+    rm -rf "$dest"
+    mv "$tmp" "$dest"
+
+    bytes=$(python3 - "$dest" <<'PY'
+import os
+import sys
+
+total = 0
+for root, _, files in os.walk(sys.argv[1]):
+    for name in files:
+        total += os.path.getsize(os.path.join(root, name))
+print(total)
+PY
+)
+
+    {
+        printf 'model\t%s\n' "$model"
+        printf 'revision\t%s\n' "$revision"
+        printf 'bytes\t%s\n' "$bytes"
+        printf 'path\t%s\n' "$dest"
+    } > "$receipt"
+
+    printf 'cockswain: ready %s (%s bytes)\n' "$model" "$bytes"
+done
