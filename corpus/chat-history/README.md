@@ -8,13 +8,25 @@ Metadata such as date, thread title, role, and source record may be added around
 
 Plain text files are preferred. This corpus is intended to support turn-by-turn and chunk-by-chunk evaluation.
 
-## Current files
+## Current corpus
 
-- `2026-09-14--19-verbatim.txt`: literal messages extracted from the earlier mixed records.
-- `2026-09-14--18-verbatim-recovered.txt`: additional literal project messages recoverable from recent conversation context.
-- `2026-08-29--09-19-verbatim-more.txt`: additional literal recent messages, including Cockswain design and correction turns.
+At this revision:
 
-At this revision the directory contains 88 literal messages.
+- 138 literal messages total
+- 88 user messages
+- 50 assistant messages
+- zero duplicate message bodies
+
+Files include literal user messages recovered from recent project threads, literal assistant replies recovered from recent conversation records, and the exact two-sided Cockswain corpus-ingestion discussion where available.
+
+## Rules
+
+- `role: user` means the body is literal user text.
+- `role: assistant` means the body is literal assistant text.
+- Do not reconstruct missing turns.
+- Do not promote a summary into transcript text.
+- A partial quote is not a full message; include it only when the source establishes that the quoted text itself is the exact unit being preserved.
+- Keep derived summaries and supervision cues outside this directory.
 
 ## Privacy boundary
 
