@@ -12,9 +12,9 @@ Plain text files are preferred. This corpus is intended to support turn-by-turn 
 
 At this revision:
 
-- 138 literal messages total
+- 148 literal messages total
 - 88 user messages
-- 50 assistant messages
+- 60 assistant messages
 - zero duplicate message bodies
 
 Files include literal user messages recovered from recent project threads, literal assistant replies recovered from recent conversation records, and the exact two-sided Cockswain corpus-ingestion discussion where available.
