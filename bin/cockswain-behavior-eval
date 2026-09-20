@@ -47,6 +47,10 @@ for case_path in "$case_root"/*.case; do
         "$case_path" > "$work/done_when.json"
     jq -Rn '[inputs | select(startswith("history\t")) | capture("^history\\t(?<role>[^\\t]+)\\t(?<content>.*)$")]' \
         "$case_path" > "$work/history.json"
+    jq -Rn '[inputs | select(startswith("required_output\t")) | sub("^required_output\t"; "")]' \
+        "$case_path" > "$work/required-output.json"
+    jq -Rn '[inputs | select(startswith("forbidden_output\t")) | sub("^forbidden_output\t"; "")]' \
+        "$case_path" > "$work/forbidden-output.json"
 
     jq -e 'length > 0' "$work/done_when.json" >/dev/null || {
         printf 'cockswain: %s has no done_when condition\n' "$case_id" >&2
@@ -61,6 +65,8 @@ for case_path in "$case_root"/*.case; do
         --slurpfile unresolved "$work/unresolved.json" \
         --slurpfile done_when "$work/done_when.json" \
         --slurpfile chat_history "$work/history.json" \
+        --slurpfile required_output "$work/required-output.json" \
+        --slurpfile forbidden_output "$work/forbidden-output.json" \
         '{
           case_id: $case_id,
           expected_action: $expected_action,
@@ -68,7 +74,9 @@ for case_path in "$case_root"/*.case; do
           state: {summary: $state},
           unresolved: $unresolved[0],
           done_when: $done_when[0],
-          chat_history: $chat_history[0]
+          chat_history: $chat_history[0],
+          expected_required_output: $required_output[0],
+          expected_forbidden_output: $forbidden_output[0]
         }' > "$work/cases/$case_id.json"
 done
 

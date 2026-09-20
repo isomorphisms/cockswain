@@ -20,6 +20,7 @@ correct=0
 false_done=0
 false_human=0
 invalid=0
+semantic_failures=0
 
 printf 'case\texpected\tactual\tresult\n'
 
@@ -35,6 +36,8 @@ for case_file in "$case_dir"/*.json; do
         (.expected_action_without_history // .expected_action)
       end
     ' "$case_file")
+    required_output=$(jq -r '.expected_required_output[]?' "$case_file")
+    forbidden_output=$(jq -r '.expected_forbidden_output[]?' "$case_file")
 
     case "$expected" in
         CONTINUE|WAIT|HUMAN|DONE) ;;
@@ -57,7 +60,13 @@ for case_file in "$case_dir"/*.json; do
        else
          .
        end)
-      | del(.expected_action, .expected_action_with_history, .expected_action_without_history)
+      | del(
+          .expected_action,
+          .expected_action_with_history,
+          .expected_action_without_history,
+          .expected_required_output,
+          .expected_forbidden_output
+        )
     ' "$case_file" > "$case_tmp"
 
     if "$supervisor_cmd" "$case_tmp" >"$result_tmp"; then
@@ -66,10 +75,31 @@ for case_file in "$case_dir"/*.json; do
         actual=INVALID
     fi
 
+    semantic_ok=1
+    if [ "$actual" != INVALID ]; then
+        rendered=$(jq -r '[.rationale, .next_prompt, .human_question, (.evidence_gaps[]?)] | map(select(. != null)) | join("\n")' "$result_tmp")
+        old_ifs=$IFS
+        IFS='
+'
+        for term in $required_output; do
+            [ -n "$term" ] || continue
+            printf '%s\n' "$rendered" | grep -Fi -- "$term" >/dev/null || semantic_ok=0
+        done
+        for term in $forbidden_output; do
+            [ -n "$term" ] || continue
+            if printf '%s\n' "$rendered" | grep -Fi -- "$term" >/dev/null; then
+                semantic_ok=0
+            fi
+        done
+        IFS=$old_ifs
+    fi
+
     result=FAIL
-    if [ "$actual" = "$expected" ]; then
+    if [ "$actual" = "$expected" ] && [ "$semantic_ok" -eq 1 ]; then
         correct=$((correct + 1))
         result=PASS
+    elif [ "$semantic_ok" -eq 0 ]; then
+        semantic_failures=$((semantic_failures + 1))
     fi
 
     if [ "$actual" = DONE ] && [ "$expected" != DONE ]; then
@@ -94,9 +124,11 @@ printf 'correct\t%d\n' "$correct"
 printf 'false_done\t%d\n' "$false_done"
 printf 'false_human\t%d\n' "$false_human"
 printf 'invalid_output\t%d\n' "$invalid"
+printf 'semantic_contract_failures\t%d\n' "$semantic_failures"
 
 [ "$total" -gt 0 ] &&
 [ "$correct" -eq "$total" ] &&
 [ "$false_done" -eq 0 ] &&
 [ "$false_human" -eq 0 ] &&
-[ "$invalid" -eq 0 ]
+[ "$invalid" -eq 0 ] &&
+[ "$semantic_failures" -eq 0 ]

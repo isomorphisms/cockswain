@@ -14,8 +14,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check shell syntax
         run: |
-          for script in bin/cockswain-* bin/import-chatgpt-export tests/test-corpus-cases.sh; do
+          for script in bin/cockswain-* bin/import-chatgpt-export tests/test-corpus-cases.sh tests/test-behavior-cases.sh; do
             sh -n "$script"
           done
       - name: Verify verbatim corpus evaluation contract
         run: sh tests/test-corpus-cases.sh
+      - name: Verify privacy-reduced behavior regressions
+        run: sh tests/test-behavior-cases.sh

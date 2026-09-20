@@ -27,6 +27,12 @@ bin/cockswain-corpus-eval
 ```
 
 The older synthetic cases under `tests/behavior/` remain useful for targeted failure modes.
+They are privacy-reduced rather than transcript evidence. Cases may declare
+`required_output` and `forbidden_output` rows; the evaluator removes those
+oracle fields before model invocation and grades the complete returned
+rationale/prompt/question/evidence text. Current cases cover retained
+constraints, ambiguous merge authorization, execution-versus-planning,
+correction persistence, and QEMU-versus-physical language.
 
 ## Dispatch contract
 

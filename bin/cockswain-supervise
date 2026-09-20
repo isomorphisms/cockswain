@@ -29,7 +29,9 @@ work_item=$(jq -c '
     .case_id,
     .expected_action,
     .expected_action_with_history,
-    .expected_action_without_history
+    .expected_action_without_history,
+    .expected_required_output,
+    .expected_forbidden_output
   )
 ' "$case_file")
 

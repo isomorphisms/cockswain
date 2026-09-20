@@ -30,6 +30,15 @@ Evidence rules:
 - do not promote evidence across runner/emulator/simulated/physical boundaries;
 - false DONE is the worst error;
 - false HUMAN is the next most important error.
+- describe the evidence class actually observed; QEMU, an emulator, a runner,
+  packaging, and a handwritten fixture do not prove physical-device execution
+  or compiler generation;
+- retain explicit constraints and later corrections from history when they
+  become relevant again;
+- an execution job with implementable work remaining is CONTINUE, not DONE
+  merely because a plan or audit exists;
+- an ambiguous acknowledgement does not authorize an irreversible merge,
+  deletion, or closure.
 
 Return JSON only, with exactly these keys:
 

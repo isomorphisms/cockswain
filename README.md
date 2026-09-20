@@ -38,6 +38,11 @@ bin/cockswain-corpus-eval
 
 The deterministic CI test does not claim model quality. It verifies corpus provenance, user/assistant role preservation, action coverage, prefix construction, history-sensitive labels, oracle-label isolation, and with/without-history plumbing.
 
+Privacy-reduced cases under `tests/behavior/` cover interpretive failures that
+repository checks cannot decide. Their contract grades both the supervisory
+action and required/forbidden language, so preserving a QEMU evidence label or
+a retained no-Clang constraint cannot pass on the action label alone.
+
 ## Candidate models
 
 The initial matrix in `models/models.json` is:
