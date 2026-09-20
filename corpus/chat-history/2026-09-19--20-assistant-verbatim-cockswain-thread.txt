@@ -1,0 +1,249 @@
+record: 001
+date: 2026-09-19
+thread: Recent history ingestion
+role: assistant
+---
+I’ll treat this as a first ingestion pass: inspect `isomorphisms/cockswain`, identify the intended chat-history format, then add a curated slice from roughly Sept. 13–19 rather than dumping everything indiscriminately.
+===
+
+record: 002
+date: 2026-09-19
+thread: Recent history ingestion
+role: assistant
+---
+The repo is genuinely empty, so there isn’t yet a format to conform to. I’m going to make the first corpus deliberately public-safe: project/workflow excerpts only, with personal chatter and private-life details excluded, and preserve the original dates/thread purpose so it can become evaluation material rather than a memory dump.
+===
+
+record: 003
+date: 2026-09-19
+thread: Recent history ingestion
+role: assistant
+---
+I have enough material for a useful first seed. The strongest examples are the repeated “can this thread close?”, “anything unresolved needs a tracker,” “don’t give up,” exact-head evidence checks, and the explicit Cockswain idea of `CONTINUE / WAIT / HUMAN / DONE`; those are much more useful than ordinary coding prompts.
+===
+
+record: 004
+date: 2026-09-19
+thread: Recent history ingestion
+role: assistant
+---
+The first write hit an empty-repository edge case in the repository API: there is no initial commit or blob SHA yet. I’m handling that as bootstrap mechanics, not changing the corpus plan.
+===
+
+record: 005
+date: 2026-09-19
+thread: Recent history ingestion
+role: assistant
+---
+The branch is now based on the actual bootstrap commit. I’m adding two layers: a machine-readable JSONL slice of representative turns, plus a short provenance note that says exactly which text is verbatim and which surrounding outcome is summarized.
+===
+
+record: 006
+date: 2026-09-19
+thread: Recent history ingestion
+role: assistant
+---
+The seed is committed on `history-sept-17-19-seed`: 13 representative records, with personal chatter excluded and summaries explicitly marked non-verbatim. I’m checking the branch diff now so I don’t leave malformed JSONL or accidentally broaden the public-data boundary.
+===
+
+record: 007
+date: 2026-09-19
+thread: Recent history ingestion
+role: assistant
+---
+The diff is narrow and the JSONL content is present exactly as intended. I’m doing one syntactic validation pass, then I’ll put it through a normal PR rather than leaving an orphan branch.
+===
+
+record: 008
+date: 2026-09-19
+thread: Recent history ingestion
+role: assistant
+---
+PR #2 is open with the validated seed. GitHub initially reports it non-mergeable, so I’m checking whether that is just the usual just-created/mergeability-calculation delay or an actual repository constraint before touching main.
+===
+
+record: 009
+date: 2026-09-19
+thread: Recent history ingestion
+role: assistant
+---
+The PR has now settled to mergeable=true, and the full diff is exactly three files with 13 valid records. There’s no unresolved code review question here, so I’m treating this as routine corpus ingestion and merging the exact reviewed head.
+===
+
+record: 010
+date: 2026-09-19
+thread: Recent history ingestion
+role: assistant
+---
+Merged **isomorphisms/cockswain PR #2, “Seed recent supervision chat history.”**
+
+It now has:
+- 13 curated records from **September 17–19**
+- exact user text marked `verbatim: true`
+- reconstructed context explicitly marked non-verbatim
+- the `CONTINUE | WAIT | HUMAN | DONE` supervisory vocabulary
+- examples of exact-head checks, evidence boundaries, “can I close this?”, unresolved-work tracking, autonomous repair, and human-loop detection
+- a public-repo privacy boundary
+
+Main corpus: `corpus/chat-history/2026-09-17--19.jsonl`.
+
+I left the takeout comment and other incidental personal material out. This is a good first seed; the next useful pass is September 13–16 plus more of the longer automated-work threads.
+===
+
+record: 011
+date: 2026-09-19
+thread: Recent history ingestion
+role: assistant
+---
+13 was too small. I’m expanding this to a real week-scale corpus: September 13–19, pulling in the technical/project threads across the week rather than only the handful that illustrated the `CONTINUE/WAIT/HUMAN/DONE` idea.
+===
+
+record: 012
+date: 2026-09-19
+thread: Recent history ingestion
+role: assistant
+---
+I also found that Cockswain PR #1 already has a private Takeout importer, so the right split is clearer: public repo gets a much larger curated non-personal corpus now; when the new Takeout arrives, the full private history can feed the same harness without being committed.
+===
+
+record: 013
+date: 2026-09-19
+thread: Recent history ingestion
+role: assistant
+---
+The older part of the week is recoverable mostly as dated intent/state summaries rather than full transcript text, so I’ll mark those as summaries instead of pretending they are quotes. September 17–19 has enough exact turns to make the corpus much denser.
+===
+
+record: 014
+date: 2026-09-19
+thread: Recent history ingestion
+role: assistant
+---
+I’m making the expansion materially larger rather than adding another dozen: two additional files, one for Sept. 13–16 summarized intent/state and one for Sept. 17–19 with many more exact user turns. That should put the public seed above fifty records before the Takeout arrives.
+===
+
+record: 015
+date: 2026-09-19
+thread: Recent history ingestion
+role: assistant
+---
+This pass added 55 candidate records. I’m removing overlap with the first seed rather than padding the count with duplicates, then I’ll update the corpus provenance and merge the expansion.
+===
+
+record: 016
+date: 2026-09-19
+thread: Recent history ingestion
+role: assistant
+---
+The deduplicated public corpus is now 64 records, not 13. I’ve kept the older recovered material visibly marked as summary and the later exact turns as verbatim; now I’m checking IDs/JSON/provenance before merging it.
+===
+
+record: 017
+date: 2026-09-19
+thread: Recent history ingestion
+role: assistant
+---
+Agreed. I expanded it substantially.
+
+Cockswain now has **64 recent-history records on `main`**, covering **September 13–19**:
+
+- **36** records contain exact preserved chat turns.
+- **28** are dated summaries where I could recover the intent/state but not safely claim exact transcript wording.
+- No duplicate IDs or duplicate verbatim messages.
+- PR **#3, “Expand recent chat-history corpus to a full week,”** is merged.
+
+When the new Takeout arrives, that changes the scale completely: PR #1 already has the importer for `conversations.json`, so we can feed the full private active-thread histories into Cockswain rather than hand-curating dozens at a time.
+===
+
+record: 018
+date: 2026-09-19
+thread: Recent history ingestion
+role: assistant
+---
+I’m going beyond the obvious thread-closeout examples now. I’ll pull in more of the week’s actual work: device acceptance, Cat Food/Grease, Idriç backend work, IB, storage, model-evaluation, and repository-process corrections.
+===
+
+record: 019
+date: 2026-09-19
+thread: Recent history ingestion
+role: assistant
+---
+Right. The 28 summary-only records should not be counted as chat history. I’m correcting that: verbatim transcript goes in the history corpus; recovered summaries, if retained at all, go somewhere separate and do not count toward the corpus.
+===
+
+record: 020
+date: 2026-09-19
+thread: Recent history ingestion
+role: assistant
+---
+I’m fixing the corpus structure, not just adding a flag. The public `chat-history` directory should contain only literal messages. The summary-derived records can live under a separate `derived-context` directory, but they will no longer be counted as transcript data.
+===
+
+record: 021
+date: 2026-09-19
+thread: Recent history ingestion
+role: assistant
+---
+I can recover a lot more literal text from the recent threads already in context. I’m extracting the existing `verbatim:true` messages into plain text first, then adding only additional exact messages so we don’t inflate the corpus with duplicates.
+===
+
+record: 022
+date: 2026-09-19
+thread: Recent history ingestion
+role: assistant
+---
+I’ve got 67 literal messages represented now, and I’m checking whether there are more exact recent turns available from prior context before I stop. I’m not going to manufacture missing assistant replies or paraphrase them into the transcript.
+===
+
+record: 023
+date: 2026-09-19
+thread: Recent history ingestion
+role: assistant
+---
+That gives us **88 literal messages** without counting a single summary as transcript. I’m updating the repository rules now so future additions cannot quietly mix paraphrases back into `chat-history`.
+===
+
+record: 024
+date: 2026-09-19
+thread: Recent history ingestion
+role: assistant
+---
+The structure is clean now: **88 literal messages, zero duplicate message bodies**, and the old mixed JSONL records are outside `chat-history`. I’m putting this through one PR and merging the exact reviewed head.
+===
+
+record: 025
+date: 2026-09-19
+thread: Recent history ingestion
+role: assistant
+---
+Correct. Summaries were the wrong thing to count.
+
+I merged **PR #7, “Make recent chat corpus strictly verbatim.”**
+
+`cockswain` now has **88 literal messages** in `corpus/chat-history/`:
+- exact text only
+- plain-text files, not JSONL
+- zero duplicate message bodies
+- the old summaries moved to `corpus/derived-context/` and no longer count as chat history
+- no invented or reconstructed assistant messages
+
+The exact material currently available is disproportionately **user-side**. I’m not filling in missing assistant turns from memory. The Takeout is what will let us ingest complete two-sided conversations verbatim.
+===
+
+record: 026
+date: 2026-09-20
+thread: Recent history ingestion
+role: assistant
+---
+Because I was being too conservative.
+
+There’s no reason to restrict the verbatim corpus to your messages. **Any assistant message whose exact text is actually available should go in too.** What I should not do is recreate assistant messages from summaries or memory and call them verbatim.
+
+So the right rule is:
+
+- exact user message available → include it
+- exact assistant message available → include it
+- only a summary/recollection available → exclude it from `chat-history`
+
+I should mine the available recent conversation records for **both sides** now, before the Takeout arrives.
+===
