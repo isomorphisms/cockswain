@@ -1,9 +1,9 @@
 name: First live model evaluation
 
 on:
-  push:
+  pull_request:
     branches:
-      - eval/first-live-2026-09-20
+      - main
 
 permissions:
   contents: read
