@@ -42,6 +42,18 @@ Privacy-reduced cases under `tests/behavior/` cover interpretive failures that
 repository checks cannot decide. Their contract grades both the supervisory
 action and required/forbidden language, so preserving a QEMU evidence label or
 a retained no-Clang constraint cannot pass on the action label alone.
+Contextual merge cases cover merge-if-clean followed by “okay,” review-only
+followed by the same acknowledgement, revocation, material scope change,
+repository-state refresh, long context, explicit human correction, and missing
+prior context. Turn checkpoints exercise the decision before and after the
+authority-changing record instead of grading only the final thread.
+
+`bin/cockswain-authority-receipt DECISION TARGET OUTPUT` renders the private
+conversation classifier's result as the public-safe plain-text receipt consumed
+by ai-ci. It preserves the original human source record, context and text
+digests, classifier revision/contract, authorized task scope, revocation, and
+objection state. It emits no GitHub head, base, check, diff, or evidence claim;
+those remain ai-ci's boundary.
 
 Merge supervision is deterministic when ai-ci has already produced its blocker
 table. `bin/cockswain-merge-state MERGE-STATE.tsv` maps mechanical work to

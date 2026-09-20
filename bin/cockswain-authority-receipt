@@ -1,0 +1,110 @@
+#!/bin/sh
+set -eu
+
+[ "$#" -eq 3 ] || {
+    echo 'usage: cockswain-authority-receipt DECISION TARGET OUTPUT' >&2
+    exit 64
+}
+
+decision_file=$1
+target_file=$2
+output=$3
+
+read_value() {
+    file=$1 key=$2
+    awk -F '\t' -v wanted="$key" '
+        $1==wanted { if (found++) exit 2; value=$2 }
+        END { if (found!=1) exit 1; print value }
+    ' "$file"
+}
+
+required() {
+    value=$(read_value "$1" "$2") || {
+        printf 'cockswain: missing or duplicate %s in %s\n' "$2" "$1" >&2
+        exit 65
+    }
+    printf '%s\n' "$value"
+}
+
+[ "$(required "$decision_file" schema)" = cockswain-merge-authority-decision-v1 ] || {
+    echo 'cockswain: unsupported authority decision schema' >&2
+    exit 65
+}
+[ "$(required "$target_file" schema)" = cockswain-merge-authority-target-v1 ] || {
+    echo 'cockswain: unsupported authority target schema' >&2
+    exit 65
+}
+
+classification=$(required "$decision_file" classification)
+authorization_kind=$(required "$decision_file" authorization_kind)
+authorized_by=$(required "$decision_file" authorized_by)
+actor_kind=$(required "$decision_file" authority_actor_kind)
+source_kind=$(required "$decision_file" authority_source_kind)
+source_id=$(required "$decision_file" authority_source_id)
+source_role=$(required "$decision_file" authority_source_role)
+text_sha=$(required "$decision_file" authority_text_sha256)
+context_ref=$(required "$decision_file" authority_context_ref)
+context_sha=$(required "$decision_file" authority_context_sha256)
+context_state=$(required "$decision_file" authority_context_state)
+contract_sha=$(required "$decision_file" classifier_contract_sha256)
+classified_scope_sha=$(required "$decision_file" classified_scope_sha256)
+scope_state=$(required "$decision_file" scope_state)
+revocation_state=$(required "$decision_file" revocation_state)
+objections=$(required "$decision_file" unresolved_objections)
+latest_record=$(required "$decision_file" latest_context_record_id)
+
+repository=$(required "$target_file" repository)
+pr=$(required "$target_file" pr)
+title=$(required "$target_file" title)
+target_scope_sha=$(required "$target_file" scope_sha256)
+classifier_revision=$(required "$target_file" classifier_revision)
+
+case $classification in AUTHORIZED|NOT_AUTHORIZED|UNKNOWN) ;; *) echo 'cockswain: invalid authority classification' >&2; exit 65 ;; esac
+case $authorization_kind in explicit-merge|conditional-clean|github-approval|task-context) ;; *) echo 'cockswain: invalid authorization kind' >&2; exit 65 ;; esac
+case $context_state in recovered|missing|unknown) ;; *) echo 'cockswain: invalid context state' >&2; exit 65 ;; esac
+case $scope_state in same|changed|unknown) ;; *) echo 'cockswain: invalid scope state' >&2; exit 65 ;; esac
+case $revocation_state in none|revoked|unknown) ;; *) echo 'cockswain: invalid revocation state' >&2; exit 65 ;; esac
+
+compatible=no
+case "$authorization_kind:$source_kind:$source_role" in
+    explicit-merge:human-message:merge-instruction|\
+    conditional-clean:human-message:conditional-merge-task|\
+    conditional-clean:human-task:conditional-merge-task|\
+    task-context:human-task:merge-authorizing-task|\
+    github-approval:github-review:github-approval) compatible=yes ;;
+esac
+
+result=$classification
+if [ "$classification" = AUTHORIZED ] && {
+       [ "$actor_kind" != human ] || [ "$compatible" != yes ] ||
+       [ "$context_state" != recovered ] || [ "$scope_state" != same ] ||
+       [ "$classified_scope_sha" != "$target_scope_sha" ] ||
+       [ "$revocation_state" != none ] || [ "$objections" != none ];
+   }; then
+    result=UNKNOWN
+fi
+
+cat > "$output" <<EOF
+schema	cockswain-merge-authority-v1
+classification	$result
+authorization_kind	$authorization_kind
+authorized_by	$authorized_by
+authority_actor_kind	$actor_kind
+authority_source_kind	$source_kind
+authority_source_id	$source_id
+authority_source_role	$source_role
+authority_text_sha256	$text_sha
+authority_context_ref	$context_ref
+authority_context_sha256	$context_sha
+authority_context_state	$context_state
+classifier_repository	isomorphisms/cockswain
+classifier_revision	$classifier_revision
+classifier_contract_sha256	$contract_sha
+authorized_repository	$repository
+authorized_pr	$pr
+authorized_title	$title
+authorized_scope_sha256	$classified_scope_sha
+revocation_state	$revocation_state
+unresolved_objections	$objections
+latest_context_record_id	$latest_record
+EOF

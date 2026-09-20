@@ -26,10 +26,19 @@ for case_path in "$case_root"/*.case; do
     case_id=$(basename "$case_path" .case)
 
     expected=$(awk -F '\t' '$1 == "expected_action" {print $2; exit}' "$case_path")
+    expected_without=$(awk -F '\t' '$1 == "expected_action_without_history" {print $2; exit}' "$case_path")
+    [ -n "$expected_without" ] || expected_without=$expected
     case "$expected" in
         CONTINUE|WAIT|HUMAN|DONE) ;;
         *)
             printf 'cockswain: %s has invalid or missing expected_action\n' "$case_id" >&2
+            exit 65
+            ;;
+    esac
+    case "$expected_without" in
+        CONTINUE|WAIT|HUMAN|DONE) ;;
+        *)
+            printf 'cockswain: %s has invalid expected_action_without_history\n' "$case_id" >&2
             exit 65
             ;;
     esac
@@ -60,6 +69,7 @@ for case_path in "$case_root"/*.case; do
     jq -n \
         --arg case_id "$case_id" \
         --arg expected_action "$expected" \
+        --arg expected_without_history "$expected_without" \
         --arg goal "$goal" \
         --arg state "$state" \
         --slurpfile unresolved "$work/unresolved.json" \
@@ -70,6 +80,8 @@ for case_path in "$case_root"/*.case; do
         '{
           case_id: $case_id,
           expected_action: $expected_action,
+          expected_action_with_history: $expected_action,
+          expected_action_without_history: $expected_without_history,
           goal: $goal,
           state: {summary: $state},
           unresolved: $unresolved[0],
@@ -78,6 +90,32 @@ for case_path in "$case_root"/*.case; do
           expected_required_output: $required_output[0],
           expected_forbidden_output: $forbidden_output[0]
         }' > "$work/cases/$case_id.json"
+
+    while IFS="$(printf '\t')" read -r key upto prefix_with prefix_without extra; do
+        [ "$key" = checkpoint ] || continue
+        [ -z "${extra:-}" ] || {
+            printf 'cockswain: %s has malformed checkpoint\n' "$case_id" >&2
+            exit 65
+        }
+        case $upto in ''|*[!0-9]*) printf 'cockswain: %s has invalid checkpoint\n' "$case_id" >&2; exit 65 ;; esac
+        history_count=$(jq -r '.chat_history | length' "$work/cases/$case_id.json")
+        [ "$upto" -ge 1 ] && [ "$upto" -le "$history_count" ] || {
+            printf 'cockswain: %s checkpoint exceeds history\n' "$case_id" >&2
+            exit 65
+        }
+        [ -n "$prefix_without" ] || prefix_without=$prefix_with
+        for action in "$prefix_with" "$prefix_without"; do
+            case $action in CONTINUE|WAIT|HUMAN|DONE) ;; *) printf 'cockswain: %s checkpoint has invalid action\n' "$case_id" >&2; exit 65 ;; esac
+        done
+        prefix_id=$case_id--turn-$upto
+        jq --arg id "$prefix_id" --arg with "$prefix_with" --arg without "$prefix_without" --argjson upto "$upto" '
+          .case_id=$id
+          | .expected_action=$with
+          | .expected_action_with_history=$with
+          | .expected_action_without_history=$without
+          | .chat_history=.chat_history[:$upto]
+        ' "$work/cases/$case_id.json" > "$work/cases/$prefix_id.json"
+    done < "$case_path"
 done
 
 [ "$found" -eq 1 ] || {

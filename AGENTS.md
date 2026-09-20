@@ -25,9 +25,13 @@ WAIT is only for a concrete external dependency that is presently in flight or u
 
 HUMAN is only for a genuinely human-only decision or action: an unspecified product/policy choice, credentials/authorization, physical action, or another boundary explicitly reserved to the user. Do not use HUMAN merely because the supervisor model is uncertain.
 
-An ambiguous acknowledgement is not authority for an irreversible merge,
-deletion, or closure. If that action is the only remaining step, request
-unambiguous authorization.
+An ambiguous acknowledgement does not create authority for an irreversible
+merge, deletion, or closure. Preserve authority established by the surrounding
+human task: if that task already authorized merge when stated conditions are
+satisfied, a later “okay” may continue the same task. If the earlier task only
+authorized review or implementation, the same “okay” still leaves merge
+authority absent. Revocation, unresolved objection, material scope change, or
+missing prior context fails closed.
 
 DONE is provisional. The controller must independently verify objective completion state before retiring the work item.
 

@@ -33,6 +33,14 @@ oracle fields before model invocation and grades the complete returned
 rationale/prompt/question/evidence text. Current cases cover retained
 constraints, ambiguous merge authorization, execution-versus-planning,
 correction persistence, and QEMU-versus-physical language.
+The contextual-authority family adds full-thread and turn-prefix cases for an
+earlier merge-if-clean task, review-only context, revocation, scope change,
+state-only refresh, long history, correction persistence, and missing context.
+
+`tests/test-authority-receipt.sh` checks the file boundary into ai-ci. A later
+acknowledgement may remain the latest record while the earlier human task stays
+the authority source. Acknowledgement-as-source, changed scope, missing context,
+revocation, and unresolved objection all produce fail-closed classifications.
 
 `tests/test-merge-state.sh` covers the non-model merge loop. It consumes ai-ci's
 plain blocker table and proves READY, running CI, physical action, missing

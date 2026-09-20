@@ -21,7 +21,7 @@ jobs:
         run: test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
       - name: Check shell syntax
         run: |
-          for script in bin/cockswain-* bin/import-chatgpt-export tests/test-corpus-cases.sh tests/test-behavior-cases.sh tests/test-merge-state.sh; do
+          for script in bin/cockswain-* bin/import-chatgpt-export tests/test-corpus-cases.sh tests/test-behavior-cases.sh tests/test-merge-state.sh tests/test-authority-receipt.sh; do
             sh -n "$script"
           done
       - name: Verify verbatim corpus evaluation contract
@@ -30,3 +30,5 @@ jobs:
         run: sh tests/test-behavior-cases.sh
       - name: Consume deterministic merge blockers without model inference
         run: sh tests/test-merge-state.sh
+      - name: Preserve contextual authority provenance
+        run: sh tests/test-authority-receipt.sh
