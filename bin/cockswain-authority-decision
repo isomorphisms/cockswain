@@ -1,0 +1,310 @@
+#!/bin/sh
+set -eu
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
+
+[ "$#" -eq 6 ] || {
+    echo 'usage: cockswain-authority-decision CONTEXT_REF CONTEXT_TSV STATE_TSV INTENT_FILE CHANGED_PATHS OUTPUT' >&2
+    exit 64
+}
+
+context_ref=$1
+context_file=$2
+state_file=$3
+intent_file=$4
+changed_paths_file=$5
+output=$6
+prompt_file=$repo_dir/prompts/merge-authority.md
+
+for command_name in awk jq sha256sum; do
+    command -v "$command_name" >/dev/null 2>&1 || {
+        printf 'cockswain: %s is required\n' "$command_name" >&2
+        exit 69
+    }
+done
+
+case $context_ref in
+    ''|*[!A-Za-z0-9._:/@+-]*)
+        echo 'cockswain: CONTEXT_REF must be a public-safe token' >&2
+        exit 64
+        ;;
+esac
+
+for file in "$state_file" "$intent_file" "$changed_paths_file" "$prompt_file"; do
+    test -f "$file" || {
+        printf 'cockswain: required file not found: %s\n' "$file" >&2
+        exit 66
+    }
+done
+
+read_value() {
+    file=$1 key=$2
+    awk -F '\t' -v wanted="$key" '
+        $1==wanted { if (found++) exit 2; value=$2 }
+        END { if (found!=1) exit 1; print value }
+    ' "$file"
+}
+
+required() {
+    value=$(read_value "$1" "$2") || {
+        printf 'cockswain: missing or duplicate %s in %s\n' "$2" "$1" >&2
+        exit 65
+    }
+    printf '%s\n' "$value"
+}
+
+[ "$(required "$state_file" schema)" = aici-merge-state-v4 ] || {
+    echo 'cockswain: unsupported ai-ci merge-state schema' >&2
+    exit 65
+}
+
+repository=$(required "$state_file" repository)
+pr=$(required "$state_file" pr)
+title=$(required "$state_file" title)
+state_intent_sha=$(required "$state_file" intent_sha256)
+state_paths_sha=$(required "$state_file" changed_paths_sha256)
+scope_sha=$(required "$state_file" current_scope_sha256)
+
+intent_sha=$(sha256sum "$intent_file" | awk '{print $1}')
+paths_sha=$(sha256sum "$changed_paths_file" | awk '{print $1}')
+calculated_scope=$(printf '%s\t%s\n' "$intent_sha" "$paths_sha" | sha256sum | awk '{print $1}')
+
+[ "$intent_sha" = "$state_intent_sha" ] || {
+    echo 'cockswain: intent file does not match ai-ci merge state' >&2
+    exit 65
+}
+[ "$paths_sha" = "$state_paths_sha" ] || {
+    echo 'cockswain: changed-paths file does not match ai-ci merge state' >&2
+    exit 65
+}
+[ "$calculated_scope" = "$scope_sha" ] || {
+    echo 'cockswain: current scope digest does not match ai-ci merge state' >&2
+    exit 65
+}
+
+classifier_revision=${COCKSWAIN_CLASSIFIER_REVISION:-}
+if [ -z "$classifier_revision" ]; then
+    classifier_revision=$(git -C "$repo_dir" rev-parse HEAD 2>/dev/null || true)
+fi
+if ! printf '%s\n' "$classifier_revision" | awk '
+    length($0)==40 && $0 ~ /^[0-9A-Fa-f]+$/ { ok=1 }
+    END { exit !ok }
+'; then
+    echo 'cockswain: cannot determine exact classifier revision' >&2
+    exit 65
+fi
+
+contract_sha=$(sha256sum "$prompt_file" | awk '{print $1}')
+empty_sha=$(printf '' | sha256sum | awk '{print $1}')
+
+write_unknown_missing() {
+    cat > "$output" <<EOF
+schema	cockswain-merge-authority-decision-v1
+classification	UNKNOWN
+authorization_kind	task-context
+authorized_by	human
+authority_actor_kind	human
+authority_source_kind	human-task
+authority_source_id	unrecovered
+authority_source_role	merge-authorizing-task
+authority_text_sha256	$empty_sha
+authority_context_ref	$context_ref
+authority_context_sha256	$empty_sha
+authority_context_state	missing
+classifier_revision	$classifier_revision
+classifier_contract_sha256	$contract_sha
+classified_scope_sha256	$scope_sha
+scope_state	unknown
+revocation_state	unknown
+unresolved_objections	unknown
+latest_context_record_id	unrecovered
+EOF
+}
+
+if [ ! -f "$context_file" ]; then
+    write_unknown_missing
+    exit 0
+fi
+
+header=$(sed -n '1p' "$context_file")
+[ "$header" = "$(printf 'record_id\trole\ttext')" ] || {
+    echo 'cockswain: invalid task-context header' >&2
+    exit 65
+}
+
+awk -F '\t' '
+NR==1 { next }
+NF!=3 || $1=="" || $1 !~ /^[A-Za-z0-9._:/@+-]+$/ || ($2!="human" && $2!="assistant") || $3=="" { exit 1 }
+seen[$1]++ { exit 1 }
+END { if (NR<2) exit 1 }
+' "$context_file" || {
+    echo 'cockswain: malformed task context' >&2
+    exit 65
+}
+
+context_sha=$(sha256sum "$context_file" | awk '{print $1}')
+latest_record=$(awk -F '\t' 'NR>1 {id=$1} END {print id}' "$context_file")
+
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT HUP INT TERM
+
+tail -n +2 "$context_file" | jq -Rn '
+    [inputs | capture("^(?<record_id>[^\t]+)\t(?<role>[^\t]+)\t(?<text>.*)$")]
+' > "$work/context.json"
+
+jq -n \
+    --arg repository "$repository" \
+    --arg pr "$pr" \
+    --arg title "$title" \
+    --arg scope_sha256 "$scope_sha" \
+    --rawfile intent "$intent_file" \
+    --rawfile changed_paths "$changed_paths_file" \
+    --slurpfile context "$work/context.json" \
+    '{
+      target: {
+        repository: $repository,
+        pr: $pr,
+        title: $title,
+        scope_sha256: $scope_sha256,
+        intent: $intent,
+        changed_paths: ($changed_paths | split("\n") | map(select(length > 0)))
+      },
+      context: $context[0]
+    }' > "$work/request.json"
+
+if [ -n "${COCKSWAIN_AUTHORITY_CMD:-}" ]; then
+    "$COCKSWAIN_AUTHORITY_CMD" "$work/request.json" > "$work/decision.json"
+else
+    model=${COCKSWAIN_MODEL:?set COCKSWAIN_MODEL or COCKSWAIN_AUTHORITY_CMD}
+    base_url=${COCKSWAIN_BASE_URL:-http://127.0.0.1:8000/v1}
+    send_reasoning=${COCKSWAIN_SEND_REASONING_EFFORT:-0}
+    command -v curl >/dev/null 2>&1 || {
+        echo 'cockswain: curl is required' >&2
+        exit 69
+    }
+    system_prompt=$(cat "$prompt_file")
+    request=$(cat "$work/request.json")
+    payload=$(jq -n \
+        --arg model "$model" \
+        --arg system "$system_prompt" \
+        --arg request "$request" \
+        '{
+          model: $model,
+          temperature: 0,
+          messages: [
+            {role: "system", content: $system},
+            {role: "user", content: ("Classify this merge-authority context:\n" + $request)}
+          ]
+        }')
+    if [ "$send_reasoning" = 1 ]; then
+        payload=$(printf '%s\n' "$payload" | jq '. + {reasoning_effort: "high"}')
+    fi
+    raw=$(curl -fsS \
+        -H 'Content-Type: application/json' \
+        --data "$payload" \
+        "$base_url/chat/completions")
+    printf '%s\n' "$raw" | jq -er '.choices[0].message.content' > "$work/model-content"
+    jq -e . "$work/model-content" > "$work/decision.json" || {
+        echo 'cockswain: authority classifier did not return JSON' >&2
+        exit 65
+    }
+fi
+
+jq -e '
+    type=="object" and
+    (keys | sort) == ([
+      "authorization_kind",
+      "authority_source_id",
+      "authority_source_kind",
+      "authority_source_role",
+      "classification",
+      "revocation_state",
+      "scope_state",
+      "unresolved_objections"
+    ] | sort) and
+    (.classification=="AUTHORIZED" or .classification=="NOT_AUTHORIZED" or .classification=="UNKNOWN") and
+    (.authorization_kind=="explicit-merge" or .authorization_kind=="conditional-clean" or .authorization_kind=="task-context") and
+    (.authority_source_kind=="human-message" or .authority_source_kind=="human-task") and
+    (.authority_source_role=="merge-instruction" or .authority_source_role=="conditional-merge-task" or .authority_source_role=="merge-authorizing-task" or .authority_source_role=="acknowledgement" or .authority_source_role=="implementation-instruction") and
+    (.authority_source_id | type=="string" and length>0 and test("^[A-Za-z0-9._:/@+-]+$")) and
+    (.scope_state=="same" or .scope_state=="changed" or .scope_state=="unknown") and
+    (.revocation_state=="none" or .revocation_state=="revoked" or .revocation_state=="unknown") and
+    (.unresolved_objections | type=="string" and length>0 and test("^[A-Za-z0-9._:/@+-]+$"))
+' "$work/decision.json" >/dev/null || {
+    echo 'cockswain: authority classifier returned output outside the contract' >&2
+    exit 65
+}
+
+classification=$(jq -r '.classification' "$work/decision.json")
+authorization_kind=$(jq -r '.authorization_kind' "$work/decision.json")
+source_kind=$(jq -r '.authority_source_kind' "$work/decision.json")
+source_id=$(jq -r '.authority_source_id' "$work/decision.json")
+source_role=$(jq -r '.authority_source_role' "$work/decision.json")
+scope_state=$(jq -r '.scope_state' "$work/decision.json")
+revocation_state=$(jq -r '.revocation_state' "$work/decision.json")
+objections=$(jq -r '.unresolved_objections' "$work/decision.json")
+
+source_line=$(awk -F '\t' -v wanted="$source_id" 'NR>1 && $1==wanted {print; found=1} END {exit !found}' "$context_file" 2>/dev/null || true)
+source_role_actual=$(printf '%s\n' "$source_line" | awk -F '\t' '{print $2}')
+source_text=$(printf '%s\n' "$source_line" | awk -F '\t' '{print $3}')
+
+if [ -z "$source_line" ] || [ "$source_role_actual" != human ]; then
+    classification=UNKNOWN
+fi
+
+compatible=no
+case "$authorization_kind:$source_kind:$source_role" in
+    explicit-merge:human-message:merge-instruction|\
+    conditional-clean:human-message:conditional-merge-task|\
+    conditional-clean:human-task:conditional-merge-task|\
+    task-context:human-task:merge-authorizing-task)
+        compatible=yes
+        ;;
+esac
+[ "$compatible" = yes ] || {
+    [ "$classification" != AUTHORIZED ] || classification=UNKNOWN
+}
+
+normalized_source=$(printf '%s' "$source_text" | tr '[:upper:]' '[:lower:]' | awk '{$1=$1; print}')
+case $normalized_source in
+    ok|okay|okay.|go|"go ahead"|yes|yep|sure|continue|proceed)
+        [ "$classification" != AUTHORIZED ] || classification=UNKNOWN
+        ;;
+esac
+
+if [ "$classification" = AUTHORIZED ] && {
+       [ "$scope_state" != same ] ||
+       [ "$revocation_state" != none ] ||
+       [ "$objections" != none ];
+   }; then
+    classification=UNKNOWN
+fi
+
+if [ -n "$source_line" ]; then
+    text_sha=$(printf '%s' "$source_text" | sha256sum | awk '{print $1}')
+else
+    text_sha=$empty_sha
+fi
+
+cat > "$output" <<EOF
+schema	cockswain-merge-authority-decision-v1
+classification	$classification
+authorization_kind	$authorization_kind
+authorized_by	human
+authority_actor_kind	human
+authority_source_kind	$source_kind
+authority_source_id	$source_id
+authority_source_role	$source_role
+authority_text_sha256	$text_sha
+authority_context_ref	$context_ref
+authority_context_sha256	$context_sha
+authority_context_state	recovered
+classifier_revision	$classifier_revision
+classifier_contract_sha256	$contract_sha
+classified_scope_sha256	$scope_sha
+scope_state	$scope_state
+revocation_state	$revocation_state
+unresolved_objections	$objections
+latest_context_record_id	$latest_record
+EOF

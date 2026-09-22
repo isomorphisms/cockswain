@@ -47,6 +47,11 @@ Preserve the evidence class in supervisory language. QEMU, emulator, runner,
 package, and handwritten-fixture results do not establish physical-device
 execution or compiler-generated evidence.
 
+For merge authority, semantic classification may come from the supervisor model,
+but provenance does not. Derive source-record existence/role, context and text
+digests, current scope binding, classifier revision, and prompt-contract digest
+from the actual inputs. Missing or malformed context fails closed.
+
 ## Reasoning
 
 Use the highest reasoning effort the selected model/runtime supports. Do not trade correctness for latency.

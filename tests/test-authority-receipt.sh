@@ -7,6 +7,7 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT HUP INT TERM
 
 S=1111111111111111111111111111111111111111
+S2=2222222222222222222222222222222222222222
 A=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 C=cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 F=ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
@@ -35,6 +36,7 @@ authority_text_sha256	$F
 authority_context_ref	private-task-17
 authority_context_sha256	$A
 authority_context_state	$context_state
+classifier_revision	$S
 classifier_contract_sha256	$C
 classified_scope_sha256	$classified_scope
 scope_state	$scope_state
@@ -75,5 +77,15 @@ expect unresolved-objection UNKNOWN
 
 write_decision NOT_AUTHORIZED acknowledgement recovered same "$A" none none
 expect review-only-then-okay NOT_AUTHORIZED
+
+write_decision AUTHORIZED merge-authorizing-task recovered same "$A" none none
+awk -F '\t' -v OFS='\t' -v wrong="$S2" '$1=="classifier_revision" {$2=wrong} {print}' \
+    "$work/decision.tsv" > "$work/x"
+mv "$work/x" "$work/decision.tsv"
+if "$renderer" "$work/decision.tsv" "$work/target.tsv" "$work/revision-mismatch.tsv" >/dev/null 2>&1; then
+    echo 'authority receipt accepted mismatched classifier revision' >&2
+    exit 1
+fi
+printf '%s\n' 'PASS	classifier-revision-mismatch	fail-closed'
 
 printf '%s\n' 'contextual authority receipt boundary passes'
