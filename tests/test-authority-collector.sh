@@ -111,6 +111,31 @@ run_case acknowledgement-cannot-create-authority UNKNOWN "$work/context.tsv"
 write_context assistant-source-case
 run_case assistant-cannot-create-authority UNKNOWN "$work/context.tsv"
 
+write_context unsafe-record-id
+sed 's/turn-3/private context label/' "$work/context.tsv" > "$work/x"
+mv "$work/x" "$work/context.tsv"
+if COCKSWAIN_CLASSIFIER_REVISION=$H COCKSWAIN_AUTHORITY_CMD=$work/stub \
+    "$collector" private-task-15 "$work/context.tsv" "$work/state.tsv" "$work/intent.txt" "$work/changed-paths.txt" "$work/unsafe-record.tsv" >/dev/null 2>&1; then
+    echo 'collector accepted a non-opaque private record id' >&2
+    exit 1
+fi
+printf '%s\n' 'PASS\tunsafe-record-id\tfail-closed'
+
+cat > "$work/private-objection-stub" <<'STUB'
+#!/bin/sh
+cat <<'EOF'
+{"classification":"AUTHORIZED","authorization_kind":"task-context","authority_source_kind":"human-task","authority_source_id":"turn-1","authority_source_role":"merge-authorizing-task","scope_state":"same","revocation_state":"none","unresolved_objections":"private objection text"}
+EOF
+STUB
+chmod +x "$work/private-objection-stub"
+write_context private-objection
+if COCKSWAIN_CLASSIFIER_REVISION=$H COCKSWAIN_AUTHORITY_CMD=$work/private-objection-stub \
+    "$collector" private-task-15 "$work/context.tsv" "$work/state.tsv" "$work/intent.txt" "$work/changed-paths.txt" "$work/private-objection.tsv" >/dev/null 2>&1; then
+    echo 'collector accepted private text in unresolved_objections' >&2
+    exit 1
+fi
+printf '%s\n' 'PASS\tprivate-objection-text\tfail-closed'
+
 rm -f "$work/missing.tsv"
 run_case unrecoverable-context UNKNOWN "$work/missing.tsv"
 grep -F 'authority_context_state	missing' "$work/unrecoverable-context.tsv" >/dev/null
