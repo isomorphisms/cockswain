@@ -1,0 +1,59 @@
+name: Hyperplane model downloads
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/hyperplane-model-downloads.yml
+      - bin/cockswain-fetch-hyperplane-model
+      - models/hyperplane/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  download:
+    name: Download ${{ matrix.model }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        model:
+          - EleutherAI/pythia-410m
+          - Qwen/Qwen3-0.6B
+          - allenai/OLMo-2-0425-1B
+          - allenai/OLMo-2-0425-1B-SFT
+          - allenai/OLMo-2-0425-1B-DPO
+          - allenai/OLMo-2-0425-1B-Instruct
+          - HuggingFaceTB/SmolLM3-3B
+
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Install Hugging Face downloader
+        run: python3 -m pip install --disable-pip-version-check "huggingface_hub[hf_xet]>=0.34"
+
+      - name: Download exact model snapshot
+        env:
+          MODEL: ${{ matrix.model }}
+        run: sh bin/cockswain-fetch-hyperplane-model "$MODEL"
+
+      - name: Locate receipt
+        id: receipt
+        env:
+          MODEL: ${{ matrix.model }}
+        run: |
+          slug=$(printf '%s' "$MODEL" | tr '/:' '__')
+          printf 'slug=%s\n' "$slug" >> "$GITHUB_OUTPUT"
+          test -s ".models/hyperplane/receipts/$slug"
+
+      - name: Preserve exact-revision receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: hyperplane-model-receipt-${{ strategy.job-index }}
+          path: .models/hyperplane/receipts/${{ steps.receipt.outputs.slug }}
+          if-no-files-found: error

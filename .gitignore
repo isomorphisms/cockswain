@@ -1,4 +1,5 @@
 .private/
 eval/results/
+.models/
 *.token
 *.cookie
