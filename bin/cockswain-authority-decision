@@ -135,7 +135,7 @@ header=$(sed -n '1p' "$context_file")
 
 awk -F '\t' '
 NR==1 { next }
-NF!=3 || $1=="" || ($2!="human" && $2!="assistant") || $3=="" { exit 1 }
+NF!=3 || $1=="" || $1 !~ /^[A-Za-z0-9._:/@+-]+$/ || ($2!="human" && $2!="assistant") || $3=="" { exit 1 }
 seen[$1]++ { exit 1 }
 END { if (NR<2) exit 1 }
 ' "$context_file" || {
@@ -230,7 +230,7 @@ jq -e '
     (.authority_source_id | type=="string" and length>0 and test("^[A-Za-z0-9._:/@+-]+$")) and
     (.scope_state=="same" or .scope_state=="changed" or .scope_state=="unknown") and
     (.revocation_state=="none" or .revocation_state=="revoked" or .revocation_state=="unknown") and
-    (.unresolved_objections | type=="string" and length>0 and (contains("\t")|not) and (contains("\n")|not))
+    (.unresolved_objections | type=="string" and length>0 and test("^[A-Za-z0-9._:/@+-]+$"))
 ' "$work/decision.json" >/dev/null || {
     echo 'cockswain: authority classifier returned output outside the contract' >&2
     exit 65
