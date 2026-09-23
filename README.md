@@ -74,6 +74,14 @@ boundary to `HUMAN`. `READY` means `CONTINUE` with the recorded merge action;
 the work is not `DONE` until refreshed objective state says the PR actually
 merged. If a physical blocker and a mechanical blocker coexist, Cockswain does
 the mechanical work first instead of summoning the human prematurely.
+
+`bin/cockswain-pr-retirement ACCOUNT_OUTPUT_DIRECTORY` consumes an account sweep
+from ai-ci and chooses one next retirement action across the whole open-PR set.
+READY merges and other mechanical work outrank physical/human boundaries and
+running-CI waits, so repeated supervision drains forgotten work instead of
+letting an opened PR disappear from the task. Unregistered PRs become
+`UNMANAGED_PR` work to attach a retirement policy. Age is deliberately absent
+from the decision: intentionally paused old work may remain open.
 Draft routing follows the declared promotion action: `mark-ready` continues,
 `wait`/`hold-draft` waits, and an unrecognized owner decision escalates. A green
 draft therefore does not remain stuck after its promotion condition is met,
