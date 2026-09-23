@@ -1,0 +1,105 @@
+#!/bin/sh
+set -eu
+
+[ "$#" -eq 1 ] || {
+    echo 'usage: cockswain-pr-retirement ACCOUNT_OUTPUT_DIRECTORY' >&2
+    exit 64
+}
+
+account_output=$1
+script_directory=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+results=$account_output/managed/results.tsv
+unmanaged=$account_output/unmanaged.tsv
+
+[ -f "$results" ] || {
+    printf 'cockswain: managed retirement results not found: %s\n' "$results" >&2
+    exit 66
+}
+[ -f "$unmanaged" ] || {
+    printf 'cockswain: unmanaged retirement list not found: %s\n' "$unmanaged" >&2
+    exit 66
+}
+
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT HUP INT TERM
+candidates=$work/candidates.tsv
+: > "$candidates"
+tab=$(printf '\t')
+
+tail -n +2 "$results" |
+while IFS="$tab" read -r repository pr result; do
+    [ -n "$repository" ] || continue
+    slug=$(printf '%s-%s' "$repository" "$pr" | tr '/' '-')
+    snapshot=$account_output/managed/$slug
+
+    if [ "$result" = READY ]; then
+        head=$(awk -F '\t' '$1=="head_sha" {print $2; found=1} END {if (!found) exit 1}' "$snapshot/pr.tsv")
+        printf '10\tCONTINUE\tREADY\t%s\t%s\t%s\tmerge\tall-required-conditions-satisfied\n' \
+            "$repository" "$pr" "$head" >> "$candidates"
+        continue
+    fi
+
+    [ "$result" = BLOCKED ] || {
+        printf 'cockswain: unknown retirement result for %s#%s: %s\n' "$repository" "$pr" "$result" >&2
+        exit 65
+    }
+    [ -f "$snapshot/result.tsv" ] || {
+        printf 'cockswain: missing merge-state result for %s#%s\n' "$repository" "$pr" >&2
+        exit 66
+    }
+
+    "$script_directory/cockswain-merge-state" "$snapshot/result.tsv" > "$work/state-$pr.tsv"
+    action=$(awk -F '\t' '$1=="action" {print $2}' "$work/state-$pr.tsv")
+    reason=$(awk -F '\t' '$1=="reason_code" {print $2}' "$work/state-$pr.tsv")
+    head=$(awk -F '\t' '$1=="head" {print $2}' "$work/state-$pr.tsv")
+    next_action=$(awk -F '\t' '$1=="next_action" {print $2}' "$work/state-$pr.tsv")
+    detail=$(awk -F '\t' '$1=="detail" {$1=""; sub(/^\t/,""); print}' OFS='\t' "$work/state-$pr.tsv")
+
+    case $action in
+        CONTINUE) priority=20 ;;
+        HUMAN) priority=40 ;;
+        WAIT) priority=50 ;;
+        DONE) priority=60 ;;
+        *) echo "cockswain: invalid merge-state action: $action" >&2; exit 65 ;;
+    esac
+    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+        "$priority" "$action" "$reason" "$repository" "$pr" "$head" "$next_action" "$detail" >> "$candidates"
+done
+
+tail -n +2 "$unmanaged" |
+while IFS="$tab" read -r repository pr title reason; do
+    [ -n "$repository" ] || continue
+    printf '30\tCONTINUE\tUNMANAGED_PR\t%s\t%s\t-\tadd-retirement-policy\t%s\n' \
+        "$repository" "$pr" "$reason" >> "$candidates"
+done
+
+if [ ! -s "$candidates" ]; then
+    printf '%s\n' \
+        'action\tDONE' \
+        'reason_code\tNO_OPEN_PRS' \
+        'repository\t-' \
+        'pr\t-' \
+        'head\t-' \
+        'next_action\t-' \
+        'detail\tall-discovered-prs-retired' |
+        awk '{gsub(/\\t/,"\t"); print}'
+    exit 0
+fi
+
+chosen=$(sort -t "$tab" -k1,1n -k4,4 -k5,5n "$candidates" | sed -n '1p')
+priority=$(printf '%s\n' "$chosen" | cut -f1)
+action=$(printf '%s\n' "$chosen" | cut -f2)
+reason=$(printf '%s\n' "$chosen" | cut -f3)
+repository=$(printf '%s\n' "$chosen" | cut -f4)
+pr=$(printf '%s\n' "$chosen" | cut -f5)
+head=$(printf '%s\n' "$chosen" | cut -f6)
+next_action=$(printf '%s\n' "$chosen" | cut -f7)
+detail=$(printf '%s\n' "$chosen" | cut -f8-)
+
+printf 'action\t%s\n' "$action"
+printf 'reason_code\t%s\n' "$reason"
+printf 'repository\t%s\n' "$repository"
+printf 'pr\t%s\n' "$pr"
+printf 'head\t%s\n' "$head"
+printf 'next_action\t%s\n' "$next_action"
+printf 'detail\t%s\n' "$detail"
