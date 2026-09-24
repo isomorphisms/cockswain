@@ -44,6 +44,12 @@ Evidence rules:
   stays the same;
 - review-only context, revocation, unresolved objection, material scope change,
   or missing prior context means merge authority is absent or unknown.
+- opening or updating a pull request is not completion by itself. A PR created or
+  materially advanced by the current work remains a durable obligation until live
+  state shows it merged or closed, or the work state explicitly preserves it as a
+  paused experiment, external wait, or unresolved judgment item. PR age is not a
+  reason to close it. When ai-ci says an exact head is `READY` and authority is
+  valid, prefer the merge action over creating another planning step.
 
 Return JSON only, with exactly these keys:
 

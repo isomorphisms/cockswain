@@ -35,6 +35,13 @@ missing prior context fails closed.
 
 DONE is provisional. The controller must independently verify objective completion state before retiring the work item.
 
+A pull request opened or materially advanced by supervised work is a durable
+obligation, not a completion token. Keep rediscovering its live state until it is
+merged, closed/superseded, waiting on a concrete external boundary, or explicitly
+preserved as paused/unresolved work. Do not close work merely because it is old,
+and do not leave an objectively READY authorized PR behind when the worker can
+merge it mechanically.
+
 ## Evidence
 
 Treat live objective state such as GitHub refs, checks, issue/PR state, and durable receipts as stronger than claims made in chat.
