@@ -4,6 +4,10 @@
 
 Cockswain supervises ongoing work. It is not the primary problem solver.
 
+See [`docs/harness-engineering.md`](docs/harness-engineering.md) for the external
+design reference on agent-legible repositories, progressive disclosure, and
+feedback loops. It is background, not a replacement for this contract.
+
 ## Decision contract
 
 Every supervision pass chooses exactly one action:
