@@ -76,12 +76,22 @@ merged. If a physical blocker and a mechanical blocker coexist, Cockswain does
 the mechanical work first instead of summoning the human prematurely.
 
 `bin/cockswain-pr-retirement ACCOUNT_OUTPUT_DIRECTORY` consumes an account sweep
-from ai-ci and chooses one next retirement action across the whole open-PR set.
+from ai-ci and chooses one next retirement action across the collected open-PR set.
 READY merges and other mechanical work outrank physical/human boundaries and
 running-CI waits, so repeated supervision drains forgotten work instead of
 letting an opened PR disappear from the task. Unregistered PRs become
 `UNMANAGED_PR` work to attach a retirement policy. Age is deliberately absent
 from the decision: intentionally paused old work may remain open.
+The consumer requires ai-ci's version 2 `collection.tsv` completion record,
+checks its table hashes, headers, unique PR identities, and reported counts,
+and refuses missing, incomplete, truncated, or altered collections. Recollect
+older account output with the updated ai-ci collector before using it here.
+An empty completed scan means no open PRs authored by the account across
+repositories visible to the API credential, including organization transfers
+and upstream contributions. Other authors and inaccessible repositories remain
+outside the scope. The older owner-only scope is rejected because it can omit
+unfinished work. The record does not establish live freshness or grant merge authority.
+
 Draft routing follows the declared promotion action: `mark-ready` continues,
 `wait`/`hold-draft` waits, and an unrecognized owner decision escalates. A green
 draft therefore does not remain stuck after its promotion condition is met,

@@ -4,14 +4,14 @@ The evaluation harness and the unattended controller have separate promotion bou
 
 ## Verbatim corpus contract
 
-`tests/test-corpus-cases.sh` is deterministic and runs in CI. It verifies eight real-history cases built from `corpus/chat-history/`:
+`tests/test-corpus-cases.sh` is deterministic and runs in CI. It verifies ten real-history base cases built from `corpus/chat-history/`:
 
-- two CONTINUE cases;
+- four CONTINUE cases;
 - two WAIT cases;
 - two HUMAN cases;
 - two DONE cases.
 
-It also requires at least two multi-record history chunks and at least two cases whose expected action changes under history ablation. A deterministic supervisor stub checks that the evaluator removes oracle labels before invocation and removes both transcript content and transcript provenance in without-history mode.
+It also checks ten turn-prefix cases (20 evaluations total), at least two two-sided user/assistant history chunks, and at least three base cases whose expected action changes under history ablation. A deterministic supervisor stub checks that the evaluator removes oracle labels before invocation and removes both transcript content and transcript provenance in without-history mode.
 
 This test proves the harness plumbing and corpus provenance. It does not claim that an open-weight model passes the corpus.
 
@@ -45,6 +45,13 @@ revocation, and unresolved objection all produce fail-closed classifications.
 `tests/test-merge-state.sh` covers the non-model merge loop. It consumes ai-ci's
 plain blocker table and proves READY, running CI, physical action, missing
 authority, stale follower, conflict-plus-physical, and genuine ambiguity routing.
+
+`tests/test-pr-retirement.sh` checks account-wide action selection and rejects
+uncollected, truncated, malformed, duplicate, and count-mismatched inputs before
+they can produce `DONE`. CI also runs ai-ci's account collector and passes its
+actual output through this consumer, including paginated, empty, failed, and
+managed collections. These are deterministic API fixtures, not live GitHub
+account or supervisor-model acceptance.
 
 ## Dispatch contract
 

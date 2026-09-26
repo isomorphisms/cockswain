@@ -10,6 +10,34 @@ account_output=$1
 script_directory=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 results=$account_output/managed/results.tsv
 unmanaged=$account_output/unmanaged.tsv
+collection=$account_output/collection.tsv
+
+[ -f "$collection" ] || {
+    echo 'cockswain: missing account completion record; recollect with ai-ci' >&2
+    exit 66
+}
+expected=$(awk -F '\t' '
+    NF != 2 || seen[$1]++ { bad=1 }
+    { value[$1]=$2 }
+    END {
+        if (value["schema"] != "aici-account-collection-v2" ||
+            value["status"] != "COMPLETE" ||
+            value["scope"] != "owner-authored-visible-repositories" ||
+            value["owner"] !~ /^[A-Za-z0-9-]+$/ ||
+            value["expected_prs"] !~ /^(0|[1-9][0-9]*)$/ ||
+            value["discovered_prs"] != value["expected_prs"] ||
+            value["expected_prs"]+0 > 1000 ||
+            value["managed_sha256"] !~ /^[0-9a-f]+$/ ||
+            length(value["managed_sha256"]) != 64 ||
+            value["unmanaged_sha256"] !~ /^[0-9a-f]+$/ ||
+            length(value["unmanaged_sha256"]) != 64) bad=1
+        if (bad) exit 1
+        print value["expected_prs"]
+    }
+' "$collection") || {
+    echo 'cockswain: incomplete or invalid account collection; recollect with ai-ci' >&2
+    exit 65
+}
 
 [ -f "$results" ] || {
     printf 'cockswain: managed retirement results not found: %s\n' "$results" >&2
@@ -18,6 +46,37 @@ unmanaged=$account_output/unmanaged.tsv
 [ -f "$unmanaged" ] || {
     printf 'cockswain: unmanaged retirement list not found: %s\n' "$unmanaged" >&2
     exit 66
+}
+
+managed_digest=$(sha256sum "$results")
+managed_digest=${managed_digest%% *}
+unmanaged_digest=$(sha256sum "$unmanaged")
+unmanaged_digest=${unmanaged_digest%% *}
+awk -F '\t' -v managed="$managed_digest" -v unmanaged="$unmanaged_digest" '
+    $1 == "managed_sha256" && $2 != managed { bad=1 }
+    $1 == "unmanaged_sha256" && $2 != unmanaged { bad=1 }
+    END { exit bad }
+' "$collection" || {
+    echo 'cockswain: account tables changed after collection; recollect with ai-ci' >&2
+    exit 65
+}
+
+[ "$(sed -n '1p' "$results")" = "$(printf 'repository\tpr\tresult')" ] &&
+[ "$(sed -n '1p' "$unmanaged")" = "$(printf 'repository\tpr\ttitle\treason')" ] &&
+awk -F '\t' -v expected="$expected" -v managed="$results" '
+    FNR == 1 { next }
+    {
+        count++
+        if ($1 !~ /^[A-Za-z0-9_-]+\/[A-Za-z0-9_.-]+$/ ||
+            $2 !~ /^[1-9][0-9]*$/ || seen[$1 SUBSEP $2]++) bad=1
+        if (FILENAME == managed) {
+            if (NF != 3 || ($3 != "READY" && $3 != "BLOCKED")) bad=1
+        } else if (NF != 4 || $4 != "no-retirement-policy") bad=1
+    }
+    END { exit bad || count != expected }
+' "$results" "$unmanaged" || {
+    echo 'cockswain: account rows do not match a complete discovery; recollect with ai-ci' >&2
+    exit 65
 }
 
 work=$(mktemp -d)
@@ -81,7 +140,7 @@ if [ ! -s "$candidates" ]; then
         'pr\t-' \
         'head\t-' \
         'next_action\t-' \
-        'detail\tall-discovered-prs-retired' |
+        'detail\tno-open-prs-in-collected-scope' |
         awk '{gsub(/\\t/,"\t"); print}'
     exit 0
 fi
