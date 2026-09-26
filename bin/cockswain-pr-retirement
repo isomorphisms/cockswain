@@ -20,9 +20,9 @@ expected=$(awk -F '\t' '
     NF != 2 || seen[$1]++ { bad=1 }
     { value[$1]=$2 }
     END {
-        if (value["schema"] != "aici-account-collection-v1" ||
+        if (value["schema"] != "aici-account-collection-v2" ||
             value["status"] != "COMPLETE" ||
-            value["scope"] != "owner-authored-owner-repositories" ||
+            value["scope"] != "owner-authored-visible-repositories" ||
             value["owner"] !~ /^[A-Za-z0-9-]+$/ ||
             value["expected_prs"] !~ /^(0|[1-9][0-9]*)$/ ||
             value["discovered_prs"] != value["expected_prs"] ||

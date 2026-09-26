@@ -38,8 +38,8 @@ complete_account() {
     managed=$(sha256sum "$account/managed/results.tsv" | cut -d ' ' -f1)
     unmanaged=$(sha256sum "$account/unmanaged.tsv" | cut -d ' ' -f1)
     printf '%s\t%s\n' \
-        schema aici-account-collection-v1 status COMPLETE \
-        scope owner-authored-owner-repositories owner isomorphisms \
+        schema aici-account-collection-v2 status COMPLETE \
+        scope owner-authored-visible-repositories owner isomorphisms \
         expected_prs "$count" discovered_prs "$count" \
         managed_sha256 "$managed" unmanaged_sha256 "$unmanaged" > "$account/collection.tsv"
 }
@@ -95,7 +95,7 @@ assert_field "$work/empty.out" reason_code NO_OPEN_PRS
 
 make_account uncollected
 reject_account uncollected
-printf 'schema\taici-account-collection-v1\nstatus\tINCOMPLETE\n' > "$work/uncollected/collection.tsv"
+printf 'schema\taici-account-collection-v2\nstatus\tINCOMPLETE\n' > "$work/uncollected/collection.tsv"
 reject_account uncollected
 
 cp -R "$work/unmanaged" "$work/truncated"
@@ -122,5 +122,17 @@ make_account unknown_status
 printf 'isomorphisms/example\t9\tUNKNOWN\n' >> "$work/unknown_status/managed/results.tsv"
 complete_account unknown_status
 reject_account unknown_status
+
+make_account former_scope
+complete_account former_scope
+sed 's/owner-authored-visible-repositories/owner-authored-owner-repositories/' "$work/former_scope/collection.tsv" > "$work/former.tsv"
+cp "$work/former.tsv" "$work/former_scope/collection.tsv"
+reject_account former_scope
+
+make_account former_schema
+complete_account former_schema
+sed 's/aici-account-collection-v2/aici-account-collection-v1/' "$work/former_schema/collection.tsv" > "$work/former.tsv"
+cp "$work/former.tsv" "$work/former_schema/collection.tsv"
+reject_account former_schema
 
 printf '%s\n' 'PASS: PR retirement keeps open work in the supervisory loop'
