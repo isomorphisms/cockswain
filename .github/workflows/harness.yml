@@ -32,6 +32,18 @@ jobs:
         run: sh tests/test-merge-state.sh
       - name: Keep open PRs in the retirement loop
         run: sh tests/test-pr-retirement.sh
+      - name: Fetch the pinned account collection contract
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: isomorphisms/ai-ci
+          ref: d23ffa1be6d1b247668077b7ca5b4f2e9246f86e
+          path: .ci-ai-ci
+          persist-credentials: false
+      - name: Verify the collector and supervisor handoff
+        run: |
+          export COCKSWAIN_PR_RETIREMENT="$GITHUB_WORKSPACE/bin/cockswain-pr-retirement"
+          sh .ci-ai-ci/tests/merge-account.sh
+          sh .ci-ai-ci/tests/merge-collector.sh
       - name: Preserve contextual authority provenance
         run: |
           sh tests/test-authority-receipt.sh
