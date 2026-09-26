@@ -70,6 +70,8 @@ a durable explicit blocker. Negative fixtures must preserve the failure they
 are designed to test rather than becoming accidentally invalid for a different
 reason.
 
-This is a snapshot from 2026-09-26. ai-ci should eventually rediscover
-`*.idric` files mechanically and fail if the discovered migration surface
-differs from its canonical inventory.
+ai-ci now rediscovers `*.idric` files mechanically across the configured
+`isomorphisms` and `isomorphismes` repositories and compares them with its
+canonical inventory once per day and on relevant ai-ci changes. Inventory drift
+is a failure, so Cockswain should treat an ai-ci drift report as an unresolved
+Idriç migration-surface obligation rather than trusting this projection.
