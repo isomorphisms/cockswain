@@ -61,7 +61,7 @@ from the actual inputs. Missing or malformed context fails closed.
 
 ## Reasoning
 
-Use the highest reasoning effort the selected model/runtime supports. Do not trade correctness for latency.
+Use the highest reasoning effort available. Latency and token cost are not priorities.
 
 ## Privacy
 
@@ -74,6 +74,18 @@ Synthetic or deliberately public regression fixtures are acceptable. Keep privat
 `corpus/chat-history/` is literal transcript evidence only. Do not place summaries, inferred intent, reconstructed assistant replies, or synthetic continuations there.
 
 Evaluation cases must reference corpus records and extract them; do not copy or rewrite transcript text into labels. Keep objective state and expected actions outside the transcript. History can change a supervision decision, but it is never proof that an external event happened.
+
+## Idriç language changes
+
+For work that changes Idriç syntax, typing, primitives, or semantics, inspect
+[`idric-code/README.md`](idric-code/README.md) before allowing DONE. Every file
+in its **Must follow Idriç changes** section must be migrated and revalidated or
+have a durable explicit blocker. Historical snapshots are review-only and must
+not be mechanically rewritten.
+
+The machine-readable authority for the migration surface is maintained in
+`isomorphisms/ai-ci/idric/source-inventory-v1.tsv`. Do not assume the Cockswain
+projection is complete when ai-ci reports inventory drift.
 
 ## Implementation
 
