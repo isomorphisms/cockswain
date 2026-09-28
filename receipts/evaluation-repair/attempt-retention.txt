@@ -1,0 +1,54 @@
+Evaluation receipt follow-up — 2026-09-28 UTC
+Remote parent: 5b1f0b3d66ad6b4066a5ef86570a8e8237ca6412
+Refreshed main: 023b9395d477a4986e858e7a2196ea584653f449
+Evaluation draft heads and complete-discovery repair unchanged.
+Scope: synthetic local regression checks, including actual evaluator SIGTERM.
+No live model evaluation, worker dispatch or access-control retry.
+
+$ sh tests/test-behavior-cases.sh
+exit=0
+PASS: behavior, output validation, continuation metrics, durable interrupted receipts, adversary loading, and workflow failure propagation
+
+$ sh tests/test-corpus-cases.sh
+exit=0
+case	expected_with	actual_with	expected_without	actual_without	expected_changed	actual_changed	result
+continue-batch-physical-failures	CONTINUE	CONTINUE	CONTINUE	CONTINUE	no	no	PASS
+continue-cockswain-no-bookkeeping--turn-1	CONTINUE	CONTINUE	HUMAN	HUMAN	yes	yes	PASS
+continue-cockswain-no-bookkeeping--turn-2	CONTINUE	CONTINUE	HUMAN	HUMAN	yes	yes	PASS
+continue-cockswain-no-bookkeeping--turn-3	CONTINUE	CONTINUE	HUMAN	HUMAN	yes	yes	PASS
+continue-cockswain-no-bookkeeping	CONTINUE	CONTINUE	HUMAN	HUMAN	yes	yes	PASS
+continue-dont-give-up	CONTINUE	CONTINUE	CONTINUE	CONTINUE	no	no	PASS
+continue-verbatim-corpus-correction--turn-2	CONTINUE	CONTINUE	HUMAN	HUMAN	yes	yes	PASS
+continue-verbatim-corpus-correction--turn-4	CONTINUE	CONTINUE	HUMAN	HUMAN	yes	yes	PASS
+continue-verbatim-corpus-correction--turn-6	CONTINUE	CONTINUE	HUMAN	HUMAN	yes	yes	PASS
+continue-verbatim-corpus-correction--turn-9	CONTINUE	CONTINUE	HUMAN	HUMAN	yes	yes	PASS
+continue-verbatim-corpus-correction	CONTINUE	CONTINUE	HUMAN	HUMAN	yes	yes	PASS
+done-close-thread	DONE	DONE	DONE	DONE	no	no	PASS
+done-oils-thread	DONE	DONE	DONE	DONE	no	no	PASS
+human-arm-thumb-reserved--turn-1	HUMAN	HUMAN	CONTINUE	CONTINUE	yes	yes	PASS
+human-arm-thumb-reserved--turn-2	HUMAN	HUMAN	CONTINUE	CONTINUE	yes	yes	PASS
+human-arm-thumb-reserved--turn-3	HUMAN	HUMAN	CONTINUE	CONTINUE	yes	yes	PASS
+human-arm-thumb-reserved	HUMAN	HUMAN	CONTINUE	CONTINUE	yes	yes	PASS
+human-tablet-physical	HUMAN	HUMAN	HUMAN	HUMAN	no	no	PASS
+wait-grease-current-head-ci	WAIT	WAIT	WAIT	WAIT	no	no	PASS
+wait-merge-ci	WAIT	WAIT	WAIT	WAIT	no	no	PASS
+
+total	20
+required_action_changes_total	13
+required_action_changes_correct	13
+missed_required_action_changes	0
+stable_action_total	7
+stable_action_correct	7
+spurious_action_changes	0
+PASS: verbatim corpus, two-sided history, turn prefixes, and paired ablation contract
+
+$ git diff --check
+exit=0
+
+$ sha256sum bin/cockswain-eval bin/cockswain-supervise tests/test-behavior-cases.sh .github/workflows/first-live-model-eval.yml
+exit=0
+421f06c4a9007bee40a86899a12c73a50bde27e8ef0a56e44eee55d684ef1ca3  bin/cockswain-eval
+6f3d987b641ebc90396d034c58e2a56dbda29ed2b16ec980ee943f92f253b80e  bin/cockswain-supervise
+785e3ad181ea10153db57557d6ef2f18c640bdc0b0eb2311b56c78c612d57c35  tests/test-behavior-cases.sh
+1edaa1d92dfb2225033494b825eccc3798e71f7e4470823004de4c8d9a1e7ea3  .github/workflows/first-live-model-eval.yml
+

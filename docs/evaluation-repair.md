@@ -59,3 +59,40 @@ opportunities, rather than only misleading zero false-DONE/HUMAN counters.
 
 No model was downloaded or evaluated, no thread was resumed, and no recurring
 controller was enabled. The original failed historical evaluation remains failed.
+
+## Follow-up: retain failed attempts and exercise continuation inputs
+
+The evaluator previously removed each response after grading. Set
+`COCKSWAIN_EVAL_RECEIPTS` to a private directory to preserve evidence. Every
+invocation creates a fresh `evaluation.*` directory with mode 0700; repeat runs
+never reuse or overwrite an earlier attempt. Case directories use numeric
+ordinals, not fixture-controlled paths. Code/prompt digests and command identity
+accompany the run. Each case retains the original oracle separately from the
+label-stripped input, output, stderr, command exit status and grade. The ordinary
+model path also retains the actual model request, raw response and transport
+exit status. These are evaluation records, not continuation dispatch receipts.
+
+Output is written directly into the attempt before grading. `PREPARED` without
+`FINISHED` means an incomplete evaluation, including a killed evaluator; it must
+not be treated as success or silently replaced. `FINISHED` means grading ended,
+not that it passed. Grades and the process exit status remain authoritative for
+the screen result. A transport error remains invalid even if a response body
+contains a valid-looking answer. An unavailable backend's partial output stays
+available for diagnosis. These files are not an fsync-backed crash journal and
+do not guarantee survival of filesystem/host loss.
+
+Receipts can contain private source context. Keep private evaluations under
+`.private/`; never commit or upload them automatically. The retained live-model
+workflow now enables receipts under its artifact directory only for its public
+fixtures. Its continuation screen runs all 14 adversaries in each history mode,
+and all six suite statuses affect the final exit. This changes future evaluation
+coverage; no live evaluation was triggered by this repair.
+
+Regression evidence includes two attempts preserving separate malformed replies,
+absence of labels in the actual model request, a transport failure with retained
+body, and a real SIGTERM between prepared and graded states with retained partial
+output. Loading all 14 adversaries through an always-failing command produces
+14 invalid results and 11 false stops. That result validates failure accounting,
+not the classifier's judgment or a worker adapter. The session-control blocker
+described in [worker adapter inspection](worker-adapter-inspection.md) remains;
+this work does not bypass it or claim unattended supervision.

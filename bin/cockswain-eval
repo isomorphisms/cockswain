@@ -15,6 +15,21 @@ case "$history_mode" in
         ;;
 esac
 
+receipt_run=
+if [ -n "${COCKSWAIN_EVAL_RECEIPTS:-}" ]; then
+    umask 077
+    mkdir -p "$COCKSWAIN_EVAL_RECEIPTS"
+    receipt_root=$(CDPATH= cd -- "$COCKSWAIN_EVAL_RECEIPTS" && pwd)
+    receipt_run=$(mktemp -d "$receipt_root/evaluation.XXXXXXXX")
+    printf 'history_mode\t%s\nsupervisor_command\t%s\n' "$history_mode" "$supervisor_cmd" > "$receipt_run/config.tsv"
+    sha256sum "$0" "$script_dir/cockswain-supervise" "$repo_dir/prompts/supervisor.md" > "$receipt_run/code.sha256"
+    command_path=$(command -v "$supervisor_cmd" || true)
+    if [ -f "$command_path" ]; then
+        sha256sum "$command_path" > "$receipt_run/supervisor.sha256"
+    fi
+    printf 'PREPARED\n' > "$receipt_run/events.tsv"
+fi
+
 total=0
 correct=0
 false_done=0
@@ -73,7 +88,27 @@ for case_file in "$case_dir"/*.json; do
         )
     ' "$case_file" > "$case_tmp"
 
-    if "$supervisor_cmd" "$case_tmp" >"$result_tmp" && jq -e -s '
+    receipt_case=
+    if [ -n "$receipt_run" ]; then
+        receipt_case="$receipt_run/case-$total"
+        mkdir "$receipt_case"
+        cp "$case_file" "$receipt_case/oracle.json"
+        cp "$case_tmp" "$receipt_case/input.json"
+        sha256sum "$receipt_case/input.json" "$receipt_case/oracle.json" > "$receipt_case/inputs.sha256"
+        printf 'PREPARED\n' > "$receipt_case/events.tsv"
+        cleanup
+        # Write directly to durable files so interruption cannot erase output.
+        result_tmp="$receipt_case/output.json"
+        case_tmp="$receipt_case/input.json"
+        trap - EXIT HUP INT TERM
+        command_status=0
+        COCKSWAIN_RESPONSE_RECEIPT="$receipt_case" "$supervisor_cmd" "$case_tmp" >"$result_tmp" 2>"$receipt_case/stderr.txt" || command_status=$?
+        printf 'RETURNED\t%s\n' "$command_status" >> "$receipt_case/events.tsv"
+    else
+        command_status=0
+        "$supervisor_cmd" "$case_tmp" >"$result_tmp" || command_status=$?
+    fi
+    if [ "$command_status" -eq 0 ] && jq -e -s '
         length == 1 and (.[0] |
           type == "object" and
           (keys | sort) == (["action", "rationale", "next_prompt", "human_question", "evidence_gaps"] | sort) and
@@ -142,9 +177,19 @@ for case_file in "$case_dir"/*.json; do
     fi
 
     printf '%s\t%s\t%s\t%s\n' "$case_id" "$expected" "$actual" "$result"
-    cleanup
+    if [ -n "$receipt_case" ]; then
+        printf 'expected\t%s\nactual\t%s\nresult\t%s\n' "$expected" "$actual" "$result" > "$receipt_case/grade.tsv"
+        sha256sum "$result_tmp" "$receipt_case/stderr.txt" > "$receipt_case/outputs.sha256"
+        printf 'GRADED\n' >> "$receipt_case/events.tsv"
+    else
+        cleanup
+    fi
     trap - EXIT HUP INT TERM
 done
+
+if [ -n "$receipt_run" ]; then
+    printf 'FINISHED\t%s\t%s\n' "$total" "$correct" >> "$receipt_run/events.tsv"
+fi
 
 printf '\n'
 printf 'history_mode\t%s\n' "$history_mode"

@@ -122,6 +122,7 @@ jobs:
           export COCKSWAIN_MODEL="$MODEL_ID"
           export COCKSWAIN_BASE_URL=http://127.0.0.1:8000/v1
           export COCKSWAIN_SEND_REASONING_EFFORT="$SEND_REASONING"
+          export COCKSWAIN_EVAL_RECEIPTS="$PWD/eval-live/attempts"
 
           work=$(mktemp -d)
           trap 'rm -rf "$work"' EXIT
@@ -163,6 +164,15 @@ jobs:
             fi
           done
 
+          for mode in with without; do
+            if COCKSWAIN_HISTORY_MODE="$mode" bin/cockswain-behavior-eval tests/continuation > "eval-live/critical-continuation-$mode.tsv" 2>&1; then
+              echo "critical_continuation_$mode=PASS" >> eval-live/status.txt
+            else
+              echo "critical_continuation_$mode=FAIL" >> eval-live/status.txt
+              overall=1
+            fi
+          done
+
           echo "critical_overall=$overall" >> eval-live/status.txt
 
           echo "===== STATUS ====="
@@ -177,6 +187,8 @@ jobs:
           cat eval-live/critical-behavior-with.tsv
           echo "===== CRITICAL BEHAVIOR WITHOUT HISTORY ====="
           cat eval-live/critical-behavior-without.tsv
+          cat eval-live/critical-continuation-with.tsv
+          cat eval-live/critical-continuation-without.tsv
           exit "$overall"
 
       - name: Stop model server

@@ -87,6 +87,7 @@ mkdir "$work/fake-network"
 cat > "$work/fake-network/curl" <<'CURL'
 #!/bin/sh
 jq -n --rawfile content "$COCKSWAIN_TEST_RESPONSE" '{choices:[{message:{content:$content}}]}'
+exit "${COCKSWAIN_TEST_TRANSPORT_EXIT:-0}"
 CURL
 chmod +x "$work/fake-network/curl"
 for response in "$repo_dir"/tests/evaluation-responses/invalid-*.txt; do
@@ -127,6 +128,75 @@ fi
 grep -F 'returned_continue_total	2' "$work/unsafe.log" >/dev/null
 grep -F 'false_continue	1' "$work/unsafe.log" >/dev/null
 
+# Preserve evidence across invalid responses, retries and interrupted attempts.
+receipt_root="$work/receipts"
+for attempt in 1 2; do
+    if COCKSWAIN_EVAL_RECEIPTS="$receipt_root" PATH="$work/fake-network:$PATH" \
+        COCKSWAIN_MODEL=fixture COCKSWAIN_TEST_RESPONSE="$repo_dir/tests/evaluation-responses/invalid-fenced.txt" \
+        "$repo_dir/bin/cockswain-eval" "$work/metric-case" > "$work/receipt-invalid.log"; then
+        printf 'FAIL: invalid model reply passed with receipts enabled\n' >&2
+        exit 1
+    fi
+done
+test "$(find "$receipt_root" -name config.tsv | wc -l)" -eq 2
+for attempt in "$receipt_root"/evaluation.*; do
+    test -f "$attempt/case-1/model-response.json"
+    jq -er '.choices[0].message.content' "$attempt/case-1/model-response.json" > "$work/recovered.txt"
+    # jq adds one newline to the original content.
+    test "$(cat "$work/recovered.txt")" = "$(cat "$repo_dir/tests/evaluation-responses/invalid-fenced.txt")"
+    jq -e '.messages[1].content | sub("^Evaluate this work state:\\n"; "") | fromjson |
+      (has("case_id") | not) and ([keys[] | select(startswith("expected_"))] | length == 0)' \
+      "$attempt/case-1/model-request.json" >/dev/null
+    grep -F 'actual	INVALID' "$attempt/case-1/grade.tsv" >/dev/null
+    grep -F 'FINISHED' "$attempt/events.tsv" >/dev/null
+    test "$(stat -c %a "$attempt")" = 700
+    sha256sum -c "$attempt/case-1/inputs.sha256" > /dev/null
+done
+
+if COCKSWAIN_EVAL_RECEIPTS="$work/transport" PATH="$work/fake-network:$PATH" \
+    COCKSWAIN_MODEL=fixture COCKSWAIN_TEST_TRANSPORT_EXIT=7 \
+    COCKSWAIN_TEST_RESPONSE="$repo_dir/tests/evaluation-responses/valid-continue.txt" \
+    "$repo_dir/bin/cockswain-eval" "$work/metric-case" > "$work/transport.log"; then
+    printf 'FAIL: transport failure accepted despite a valid response body\n' >&2
+    exit 1
+fi
+for attempt in "$work/transport"/evaluation.*; do
+    grep -F 'transport_exit	7' "$attempt/case-1/transport.tsv" >/dev/null
+    test -s "$attempt/case-1/model-response.json"
+    grep -F 'actual	INVALID' "$attempt/case-1/grade.tsv" >/dev/null
+done
+
+interrupted="$work/interrupted-stub"
+cat > "$interrupted" <<'INTERRUPTED'
+#!/bin/sh
+printf 'partial reply retained\n'
+kill -TERM "$PPID"
+exit 0
+INTERRUPTED
+chmod +x "$interrupted"
+if COCKSWAIN_EVAL_RECEIPTS="$work/interrupted" COCKSWAIN_SUPERVISOR_CMD="$interrupted" \
+    "$repo_dir/bin/cockswain-eval" "$work/metric-case" > "$work/interrupted.log" 2>&1; then
+    printf 'FAIL: interrupted evaluator succeeded\n' >&2
+    exit 1
+fi
+for attempt in "$work/interrupted"/evaluation.*; do
+    grep -F 'partial reply retained' "$attempt/case-1/output.json" >/dev/null
+    grep -F 'PREPARED' "$attempt/events.tsv" >/dev/null
+    if grep -F 'FINISHED' "$attempt/events.tsv" >/dev/null; then
+        printf 'FAIL: interrupted attempt marked finished\n' >&2
+        exit 1
+    fi
+done
+
+if COCKSWAIN_EVAL_RECEIPTS="$work/adversaries" COCKSWAIN_SUPERVISOR_CMD=/bin/false \
+    COCKSWAIN_HISTORY_MODE=with "$repo_dir/bin/cockswain-behavior-eval" "$repo_dir/tests/continuation" > "$work/adversaries.log"; then
+    printf 'FAIL: always-invalid continuation screen passed\n' >&2
+    exit 1
+fi
+grep -F 'invalid_output	14' "$work/adversaries.log" >/dev/null
+grep -F 'false_stopping	11' "$work/adversaries.log" >/dev/null
+test "$(find "$work/adversaries" -name grade.tsv | wc -l)" -eq 14
+
 # Execute the real workflow run block, with only its child evaluators replaced.
 # This tests exit propagation and retained reports without downloading a model.
 workflow="$repo_dir/.github/workflows/first-live-model-eval.yml"
@@ -150,9 +220,10 @@ if [ -f "$workflow" ]; then
         exit 1
     fi
     grep -F 'critical_overall=1' "$workflow_root/eval-live/status.txt" >/dev/null
-    test "$(grep -c '=FAIL' "$workflow_root/eval-live/status.txt")" -eq 4
+    test "$(grep -c '=FAIL' "$workflow_root/eval-live/status.txt")" -eq 6
     test -f "$workflow_root/eval-live/critical-corpus-with.tsv"
     test -f "$workflow_root/eval-live/critical-behavior-without.tsv"
+    test -f "$workflow_root/eval-live/critical-continuation-without.tsv"
     # Mutation control: deleting the fix reproduces the original false green.
     sed '/^exit "\$overall"$/d' "$work/evaluation-step" > "$work/old-evaluation-step"
     (cd "$workflow_root" && MODEL_ID=test SEND_REASONING=0 bash "$work/old-evaluation-step") > "$work/old-wrapper.log"
@@ -161,7 +232,7 @@ if [ -f "$workflow" ]; then
     : > "$workflow_root/eval-live/status.txt"
     (cd "$workflow_root" && MODEL_ID=test SEND_REASONING=0 bash "$work/evaluation-step") > "$work/wrapper-pass.log"
     grep -F 'critical_overall=0' "$workflow_root/eval-live/status.txt" >/dev/null
-    test "$(grep -c '=PASS' "$workflow_root/eval-live/status.txt")" -eq 4
+    test "$(grep -c '=PASS' "$workflow_root/eval-live/status.txt")" -eq 6
 fi
 
-printf 'PASS: behavior, output validation, continuation metrics, and workflow failure propagation\n'
+printf 'PASS: behavior, output validation, continuation metrics, durable interrupted receipts, adversary loading, and workflow failure propagation\n'

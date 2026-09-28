@@ -18,6 +18,12 @@ with only invalid replies does not establish model quality.
 
 Latency is diagnostic only.
 
+Set `COCKSWAIN_EVAL_RECEIPTS` to a private output directory to retain individual
+attempts, including invalid and interrupted results. See the repair document for
+the file contract and privacy boundary. Without this setting the command retains
+its original temporary-output behavior. Live-model CI enables receipts for its
+public fixtures and includes the 14 continuation adversaries in both modes.
+
 ## Verbatim public corpus
 
 Current main contains 148 literal messages: 88 user and 60 assistant. Evaluation fixtures reference those messages by file and record number; they never rewrite transcript text.

@@ -52,10 +52,23 @@ if [ "$send_reasoning" = 1 ]; then
     payload=$(printf '%s\n' "$payload" | jq '. + {reasoning_effort: "high"}')
 fi
 
+if [ -n "${COCKSWAIN_RESPONSE_RECEIPT:-}" ]; then
+    # The evaluator owns this private, freshly created attempt directory.
+    printf '%s\n' "$payload" > "$COCKSWAIN_RESPONSE_RECEIPT/model-request.json"
+    transport_status=0
+    curl -fsS \
+        -H 'Content-Type: application/json' \
+        --data "$payload" \
+        "$base_url/chat/completions" > "$COCKSWAIN_RESPONSE_RECEIPT/model-response.json" || transport_status=$?
+    printf 'transport_exit\t%s\n' "$transport_status" > "$COCKSWAIN_RESPONSE_RECEIPT/transport.tsv"
+    [ "$transport_status" -eq 0 ] || exit "$transport_status"
+    raw=$(cat "$COCKSWAIN_RESPONSE_RECEIPT/model-response.json")
+else
 raw=$(curl -fsS \
     -H 'Content-Type: application/json' \
     --data "$payload" \
     "$base_url/chat/completions")
+fi
 
 content=$(printf '%s\n' "$raw" | jq -er '.choices[0].message.content')
 
