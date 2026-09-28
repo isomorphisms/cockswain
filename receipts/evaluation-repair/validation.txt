@@ -1,0 +1,52 @@
+Evaluation repair validation — 2026-09-28 UTC
+Base: 6519a89a2595ddc31f077ad25d2d6504d249f4de
+Scope: deterministic regression tests; no live model or dispatched continuation.
+
+$ sh tests/test-behavior-cases.sh
+exit=0
+PASS: behavior, output validation, continuation metrics, and workflow failure propagation
+
+$ sh tests/test-corpus-cases.sh
+exit=0
+case	expected_with	actual_with	expected_without	actual_without	expected_changed	actual_changed	result
+continue-batch-physical-failures	CONTINUE	CONTINUE	CONTINUE	CONTINUE	no	no	PASS
+continue-cockswain-no-bookkeeping--turn-1	CONTINUE	CONTINUE	HUMAN	HUMAN	yes	yes	PASS
+continue-cockswain-no-bookkeeping--turn-2	CONTINUE	CONTINUE	HUMAN	HUMAN	yes	yes	PASS
+continue-cockswain-no-bookkeeping--turn-3	CONTINUE	CONTINUE	HUMAN	HUMAN	yes	yes	PASS
+continue-cockswain-no-bookkeeping	CONTINUE	CONTINUE	HUMAN	HUMAN	yes	yes	PASS
+continue-dont-give-up	CONTINUE	CONTINUE	CONTINUE	CONTINUE	no	no	PASS
+continue-verbatim-corpus-correction--turn-2	CONTINUE	CONTINUE	HUMAN	HUMAN	yes	yes	PASS
+continue-verbatim-corpus-correction--turn-4	CONTINUE	CONTINUE	HUMAN	HUMAN	yes	yes	PASS
+continue-verbatim-corpus-correction--turn-6	CONTINUE	CONTINUE	HUMAN	HUMAN	yes	yes	PASS
+continue-verbatim-corpus-correction--turn-9	CONTINUE	CONTINUE	HUMAN	HUMAN	yes	yes	PASS
+continue-verbatim-corpus-correction	CONTINUE	CONTINUE	HUMAN	HUMAN	yes	yes	PASS
+done-close-thread	DONE	DONE	DONE	DONE	no	no	PASS
+done-oils-thread	DONE	DONE	DONE	DONE	no	no	PASS
+human-arm-thumb-reserved--turn-1	HUMAN	HUMAN	CONTINUE	CONTINUE	yes	yes	PASS
+human-arm-thumb-reserved--turn-2	HUMAN	HUMAN	CONTINUE	CONTINUE	yes	yes	PASS
+human-arm-thumb-reserved--turn-3	HUMAN	HUMAN	CONTINUE	CONTINUE	yes	yes	PASS
+human-arm-thumb-reserved	HUMAN	HUMAN	CONTINUE	CONTINUE	yes	yes	PASS
+human-tablet-physical	HUMAN	HUMAN	HUMAN	HUMAN	no	no	PASS
+wait-grease-current-head-ci	WAIT	WAIT	WAIT	WAIT	no	no	PASS
+wait-merge-ci	WAIT	WAIT	WAIT	WAIT	no	no	PASS
+
+total	20
+required_action_changes_total	13
+required_action_changes_correct	13
+missed_required_action_changes	0
+stable_action_total	7
+stable_action_correct	7
+spurious_action_changes	0
+PASS: verbatim corpus, two-sided history, turn prefixes, and paired ablation contract
+
+$ git diff --check
+exit=0
+
+$ sha256sum bin/cockswain-eval bin/cockswain-supervise tests/test-behavior-cases.sh .github/workflows/first-live-model-eval.yml .github/workflows/harness.yml
+exit=0
+380c53154e6d4fb4917b38cc223d7789734581635167aa17803dfbc490c6eb47  bin/cockswain-eval
+0a8c2035387b92c2e477fc275f36baea4152ee56fc28869b2cd87530eb989149  bin/cockswain-supervise
+940c4074dda21f28fd31509f838f86928742bc4145f6622fe6eeff50b29e53d1  tests/test-behavior-cases.sh
+a092232dcfb41653d4fc85bf07d091765faa798356257ca4e2ffdcb3848ac1a8  .github/workflows/first-live-model-eval.yml
+340e1a5d8b62dead074bfd36519558ce2a0c78fd710fcbc4501ed19ec9563163  .github/workflows/harness.yml
+

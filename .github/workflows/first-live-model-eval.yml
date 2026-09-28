@@ -118,7 +118,7 @@ jobs:
           MODEL_ID: ${{ matrix.model_id }}
           SEND_REASONING: ${{ matrix.send_reasoning }}
         run: |
-          set -u
+          set -eu
           export COCKSWAIN_MODEL="$MODEL_ID"
           export COCKSWAIN_BASE_URL=http://127.0.0.1:8000/v1
           export COCKSWAIN_SEND_REASONING_EFFORT="$SEND_REASONING"
@@ -177,6 +177,7 @@ jobs:
           cat eval-live/critical-behavior-with.tsv
           echo "===== CRITICAL BEHAVIOR WITHOUT HISTORY ====="
           cat eval-live/critical-behavior-without.tsv
+          exit "$overall"
 
       - name: Stop model server
         if: always()

@@ -1,0 +1,7 @@
+expected_action	CONTINUE
+goal	Continue the original implementation safely.
+state	The prior decision expected head A. A fresh inspection sees head B written by another worker. Ownership of the new work is unknown; its diff and session status are accessible. Do not dispatch the old implementation packet.
+unresolved	Refresh the diff, ownership and assumptions before any mutating resume.
+done_when	A current compatible snapshot and exclusive ownership exist.
+required_output	refresh
+forbidden_output	resume the old packet

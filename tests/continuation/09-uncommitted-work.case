@@ -1,0 +1,7 @@
+expected_action	CONTINUE
+goal	Resume the registered unfinished job without losing its work.
+state	The original worker stopped with useful uncommitted edits and no PR. Its workspace is reachable, owner identity is verified and it is idle. No remote branch contains those edits. Preservation is authorized; implementation restart must follow preservation.
+unresolved	Inspect and preserve the original workspace before constructing a replacement attempt.
+done_when	Useful edits and their provenance survive before further implementation.
+required_output	preserve
+forbidden_output	reset the workspace

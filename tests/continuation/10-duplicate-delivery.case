@@ -1,0 +1,7 @@
+expected_action	WAIT
+goal	Keep the registered implementation moving once.
+state	A durable dispatch ID already has an acknowledged running worker. A duplicate controller invocation targets the same job and generation. No independent investigation remains useful while that run proceeds.
+unresolved	Await the existing run; send no duplicate prompt.
+done_when	Existing run is reconciled before any next dispatch.
+required_output	existing
+forbidden_output	send another continue

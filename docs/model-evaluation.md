@@ -8,6 +8,13 @@ Generic leaderboards are not the acceptance criterion for Cockswain. Evaluate su
 - false_human: model returned HUMAN when the mode-specific label was not HUMAN;
 - action_accuracy;
 - invalid_output: response did not match the supervisor result contract.
+- false_continue: valid CONTINUE with the wrong expected action or a failed output-language screen;
+- false_stopping: expected CONTINUE opportunities that failed, including invalid output;
+- expected_continue_total and returned_continue_total: explicit denominators for those screens.
+
+See [evaluation repair](evaluation-repair.md) for overlapping counts and the
+boundary between screening and actual execution safety. Zero false_continue
+with only invalid replies does not establish model quality.
 
 Latency is diagnostic only.
 

@@ -1,0 +1,7 @@
+expected_action	CONTINUE
+goal	Recover an interrupted continuation dispatch without duplicates.
+state	The packet was durably prepared, delivery timed out, and acknowledgment is missing. The transport supports querying the same dispatch ID. It is unknown whether the worker accepted it. No new implementation dispatch is authorized until that query resolves.
+unresolved	Reconcile the dispatch ID; do not retry as a new attempt.
+done_when	Existing delivery status established without duplicate work.
+required_output	dispatch
+forbidden_output	create a new dispatch

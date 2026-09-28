@@ -59,15 +59,19 @@ raw=$(curl -fsS \
 
 content=$(printf '%s\n' "$raw" | jq -er '.choices[0].message.content')
 
-if ! printf '%s\n' "$content" | jq -e '
-    (type == "object") and
-    (.action == "CONTINUE" or .action == "WAIT" or .action == "HUMAN" or .action == "DONE") and
-    (.rationale | type == "string") and
-    ((.next_prompt | type) == "string" or .next_prompt == null) and
-    ((.human_question | type) == "string" or .human_question == null) and
-    (.evidence_gaps | type == "array") and
-    (if .action == "CONTINUE" then (.next_prompt | type == "string") and (.human_question == null) else true end) and
-    (if .action == "HUMAN" then (.human_question | type == "string") else true end)
+if ! printf '%s\n' "$content" | jq -e -s '
+    length == 1 and (.[0] |
+      type == "object" and
+      (keys | sort) == (["action", "rationale", "next_prompt", "human_question", "evidence_gaps"] | sort) and
+      (.action == "CONTINUE" or .action == "WAIT" or .action == "HUMAN" or .action == "DONE") and
+      (.rationale | type == "string" and test("\\S")) and
+      (.evidence_gaps | type == "array" and all(.[]; type == "string")) and
+      (if .action == "CONTINUE" then
+         (.next_prompt | type == "string" and test("\\S")) and .human_question == null
+       elif .action == "HUMAN" then
+         .next_prompt == null and (.human_question | type == "string" and test("\\S"))
+       else .next_prompt == null and .human_question == null end)
+    )
 ' >/dev/null 2>&1; then
     printf 'cockswain: model returned output outside the supervisor contract\n%s\n' "$content" >&2
     exit 65

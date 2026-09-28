@@ -21,6 +21,10 @@ false_done=0
 false_human=0
 invalid=0
 semantic_failures=0
+continue_expected=0
+continue_returned=0
+false_continue=0
+false_stopping=0
 
 printf 'case\texpected\tactual\tresult\n'
 
@@ -69,8 +73,21 @@ for case_file in "$case_dir"/*.json; do
         )
     ' "$case_file" > "$case_tmp"
 
-    if "$supervisor_cmd" "$case_tmp" >"$result_tmp"; then
-        actual=$(jq -r '.action // "INVALID"' "$result_tmp" 2>/dev/null || printf 'INVALID')
+    if "$supervisor_cmd" "$case_tmp" >"$result_tmp" && jq -e -s '
+        length == 1 and (.[0] |
+          type == "object" and
+          (keys | sort) == (["action", "rationale", "next_prompt", "human_question", "evidence_gaps"] | sort) and
+          (.action == "CONTINUE" or .action == "WAIT" or .action == "HUMAN" or .action == "DONE") and
+          (.rationale | type == "string" and test("\\S")) and
+          (.evidence_gaps | type == "array" and all(.[]; type == "string")) and
+          (if .action == "CONTINUE" then
+             (.next_prompt | type == "string" and test("\\S")) and .human_question == null
+           elif .action == "HUMAN" then
+             .next_prompt == null and (.human_question | type == "string" and test("\\S"))
+           else .next_prompt == null and .human_question == null end)
+        )
+      ' "$result_tmp" >/dev/null 2>&1; then
+        actual=$(jq -r '.action' "$result_tmp")
     else
         actual=INVALID
     fi
@@ -111,6 +128,18 @@ for case_file in "$case_dir"/*.json; do
     if [ "$actual" = INVALID ]; then
         invalid=$((invalid + 1))
     fi
+    if [ "$expected" = CONTINUE ]; then
+        continue_expected=$((continue_expected + 1))
+        if [ "$result" != PASS ]; then
+            false_stopping=$((false_stopping + 1))
+        fi
+    fi
+    if [ "$actual" = CONTINUE ]; then
+        continue_returned=$((continue_returned + 1))
+        if [ "$expected" != CONTINUE ] || [ "$semantic_ok" -eq 0 ]; then
+            false_continue=$((false_continue + 1))
+        fi
+    fi
 
     printf '%s\t%s\t%s\t%s\n' "$case_id" "$expected" "$actual" "$result"
     cleanup
@@ -125,6 +154,10 @@ printf 'false_done\t%d\n' "$false_done"
 printf 'false_human\t%d\n' "$false_human"
 printf 'invalid_output\t%d\n' "$invalid"
 printf 'semantic_contract_failures\t%d\n' "$semantic_failures"
+printf 'expected_continue_total\t%d\n' "$continue_expected"
+printf 'returned_continue_total\t%d\n' "$continue_returned"
+printf 'false_continue\t%d\n' "$false_continue"
+printf 'false_stopping\t%d\n' "$false_stopping"
 
 [ "$total" -gt 0 ] &&
 [ "$correct" -eq "$total" ] &&

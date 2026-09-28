@@ -70,5 +70,98 @@ if COCKSWAIN_SUPERVISOR_CMD="$bad_stub" "$repo_dir/bin/cockswain-behavior-eval" 
     exit 1
 fi
 grep -F 'semantic_contract_failures	1' "$work/bad.log" >/dev/null
+grep -F 'false_continue	1' "$work/bad.log" >/dev/null
+grep -F 'false_stopping	1' "$work/bad.log" >/dev/null
 
-printf 'PASS: privacy-reduced behavior cases and output-language grading\n'
+# A custom supervisor command must satisfy the same result shape as the model.
+# Invalid replies count as failed opportunities, not zero-error safety evidence.
+mkdir "$work/metric-case"
+cp "$repo_dir/tests/cases/continue.json" "$work/metric-case/"
+response_stub="$work/response-stub"
+cat > "$response_stub" <<'RESPONSE'
+#!/bin/sh
+cat "$COCKSWAIN_TEST_RESPONSE"
+RESPONSE
+chmod +x "$response_stub"
+mkdir "$work/fake-network"
+cat > "$work/fake-network/curl" <<'CURL'
+#!/bin/sh
+jq -n --rawfile content "$COCKSWAIN_TEST_RESPONSE" '{choices:[{message:{content:$content}}]}'
+CURL
+chmod +x "$work/fake-network/curl"
+for response in "$repo_dir"/tests/evaluation-responses/invalid-*.txt; do
+    if COCKSWAIN_TEST_RESPONSE="$response" COCKSWAIN_SUPERVISOR_CMD="$response_stub" \
+        "$repo_dir/bin/cockswain-eval" "$work/metric-case" > "$work/invalid.log"; then
+        printf 'FAIL: accepted invalid response: %s\n' "$response" >&2
+        exit 1
+    fi
+    grep -F 'invalid_output	1' "$work/invalid.log" >/dev/null
+    grep -F 'expected_continue_total	1' "$work/invalid.log" >/dev/null
+    grep -F 'false_stopping	1' "$work/invalid.log" >/dev/null
+    if PATH="$work/fake-network:$PATH" COCKSWAIN_MODEL=fixture \
+        COCKSWAIN_TEST_RESPONSE="$response" "$repo_dir/bin/cockswain-supervise" \
+        "$repo_dir/tests/cases/continue.json" > "$work/model-invalid.log" 2>&1; then
+        printf 'FAIL: model boundary accepted invalid response: %s\n' "$response" >&2
+        exit 1
+    fi
+done
+COCKSWAIN_TEST_RESPONSE="$repo_dir/tests/evaluation-responses/valid-continue.txt" \
+    COCKSWAIN_SUPERVISOR_CMD="$response_stub" \
+    "$repo_dir/bin/cockswain-eval" "$work/metric-case" > "$work/valid.log"
+grep -F 'correct	1' "$work/valid.log" >/dev/null
+grep -F 'false_continue	0' "$work/valid.log" >/dev/null
+grep -F 'false_stopping	0' "$work/valid.log" >/dev/null
+PATH="$work/fake-network:$PATH" COCKSWAIN_MODEL=fixture \
+    COCKSWAIN_TEST_RESPONSE="$repo_dir/tests/evaluation-responses/valid-continue.txt" \
+    "$repo_dir/bin/cockswain-supervise" "$repo_dir/tests/cases/continue.json" > "$work/model-valid.log"
+jq -e '.action == "CONTINUE"' "$work/model-valid.log" >/dev/null
+
+# A well-shaped but unjustified continuation must fail and increment its counter.
+cp "$repo_dir/tests/cases/wait.json" "$work/metric-case/"
+if COCKSWAIN_TEST_RESPONSE="$repo_dir/tests/evaluation-responses/valid-continue.txt" \
+    COCKSWAIN_SUPERVISOR_CMD="$response_stub" \
+    "$repo_dir/bin/cockswain-eval" "$work/metric-case" > "$work/unsafe.log"; then
+    printf 'FAIL: continuation while waiting was accepted\n' >&2
+    exit 1
+fi
+grep -F 'returned_continue_total	2' "$work/unsafe.log" >/dev/null
+grep -F 'false_continue	1' "$work/unsafe.log" >/dev/null
+
+# Execute the real workflow run block, with only its child evaluators replaced.
+# This tests exit propagation and retained reports without downloading a model.
+workflow="$repo_dir/.github/workflows/first-live-model-eval.yml"
+if [ -f "$workflow" ]; then
+    awk '
+      /^      - name: Run critical supervisor screen$/ { selected=1; next }
+      selected && /^        run: \|$/ { body=1; next }
+      body && /^      - name:/ { exit }
+      body { sub(/^          /, ""); print }
+    ' "$workflow" > "$work/evaluation-step"
+    test -s "$work/evaluation-step"
+    workflow_root="$work/workflow"
+    mkdir "$workflow_root"
+    cp -R "$repo_dir/bin" "$repo_dir/tests" "$repo_dir/corpus" "$workflow_root/"
+    mkdir "$workflow_root/eval-live"
+    cp /bin/false "$workflow_root/bin/cockswain-eval"
+    cp /bin/false "$workflow_root/bin/cockswain-behavior-eval"
+    cp /bin/true "$workflow_root/bin/cockswain-ablation-report"
+    if (cd "$workflow_root" && MODEL_ID=test SEND_REASONING=0 bash "$work/evaluation-step") > "$work/wrapper-fail.log"; then
+        printf 'FAIL: failed evaluation children produced a green wrapper\n' >&2
+        exit 1
+    fi
+    grep -F 'critical_overall=1' "$workflow_root/eval-live/status.txt" >/dev/null
+    test "$(grep -c '=FAIL' "$workflow_root/eval-live/status.txt")" -eq 4
+    test -f "$workflow_root/eval-live/critical-corpus-with.tsv"
+    test -f "$workflow_root/eval-live/critical-behavior-without.tsv"
+    # Mutation control: deleting the fix reproduces the original false green.
+    sed '/^exit "\$overall"$/d' "$work/evaluation-step" > "$work/old-evaluation-step"
+    (cd "$workflow_root" && MODEL_ID=test SEND_REASONING=0 bash "$work/old-evaluation-step") > "$work/old-wrapper.log"
+    cp /bin/true "$workflow_root/bin/cockswain-eval"
+    cp /bin/true "$workflow_root/bin/cockswain-behavior-eval"
+    : > "$workflow_root/eval-live/status.txt"
+    (cd "$workflow_root" && MODEL_ID=test SEND_REASONING=0 bash "$work/evaluation-step") > "$work/wrapper-pass.log"
+    grep -F 'critical_overall=0' "$workflow_root/eval-live/status.txt" >/dev/null
+    test "$(grep -c '=PASS' "$workflow_root/eval-live/status.txt")" -eq 4
+fi
+
+printf 'PASS: behavior, output validation, continuation metrics, and workflow failure propagation\n'

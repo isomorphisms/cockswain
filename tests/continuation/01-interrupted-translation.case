@@ -1,0 +1,7 @@
+expected_action	CONTINUE
+goal	Finish the retained whole-program translation from its pinned original source; do not redesign.
+state	The registered specification, branch/head and correction watermark were refreshed. The original worker is idle, its attempt is preserved, ownership is exclusive, and source files for acceptance item T4 remain untranslated. No user-only decision or dependency blocks T4.
+unresolved	Continue T4 in the same worker under the existing specification.
+done_when	Original translation acceptance items verified.
+required_output	T4
+forbidden_output	redesign the architecture

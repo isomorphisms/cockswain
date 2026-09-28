@@ -1,0 +1,2 @@
+{"action":"CONTINUE","rationale":"Repair remains.","next_prompt":"Continue.","human_question":null,"evidence_gaps":[]}
+{"action":"DONE","rationale":"Complete.","next_prompt":null,"human_question":null,"evidence_gaps":[]}

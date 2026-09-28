@@ -1,0 +1,7 @@
+expected_action	CONTINUE
+goal	Finish the specified translation including T4.
+state	The worker says done. Fresh source inspection shows T4 absent; the original unchanged job explicitly requires T4. Ownership and authority permit finishing it.
+unresolved	Complete the omitted T4 and verify it.
+done_when	Every original criterion has independent evidence.
+required_output	T4
+forbidden_output	accept the omission
