@@ -15,6 +15,12 @@ This repository contains the first executable supervisor/evaluation harness. It 
 
 The public chat corpus under `corpus/chat-history/` is strictly verbatim. Summaries and reconstructed context live under `corpus/derived-context/` and do not count as transcript evidence.
 
+The [routine-continuation investigation](docs/continuation/README.md) records the
+2026-09-28 architecture audit, historical intervention corpus, concurrency and
+authority boundaries, adversarial acceptance cases, and limits on unattended use.
+Its receipts distinguish working evaluation plumbing from an accepted live
+supervisor and dispatcher.
+
 ## OpenAI developer API mirror
 
 The complete OpenAPI repository published by `openai/openai-openapi` is pinned under `vendor/openai-api/upstream`. `vendor/openai-api/UPSTREAM` records the exact source revision; `sh bin/update-openai-api-mirror` advances the pinned mirror deliberately.

@@ -1,0 +1,7 @@
+expected_action	CONTINUE
+goal	Finish the retained implementation without redesign.
+state	The original job explicitly prohibits redesign. Fresh diff inspection shows the worker began an alternate architecture. The worker is stopped and its attempt can be preserved. The original required path is available; do not delete the alternate work.
+unresolved	Preserve the attempt, inspect divergence, and resume only the specified path in isolation.
+done_when	Original path implemented and accepted without destroying the failed attempt.
+required_output	preserve
+forbidden_output	continue the redesign

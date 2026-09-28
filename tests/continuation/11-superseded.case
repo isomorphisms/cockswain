@@ -1,0 +1,7 @@
+expected_action	DONE
+goal	Resolve the old attempt's scheduling obligation.
+state	Freshly verified successor job S owns every unresolved obligation and its live worker is tracked. The old idle attempt's exact work is preserved; the authorized replacement link is explicit and acyclic. No obligations remain assigned to the old attempt. The overall project remains unfinished.
+unresolved	Retire only the old scheduling obligation, keeping S active.
+done_when	Old attempt safely retired without claiming the whole project complete.
+required_output	successor
+forbidden_output	the whole project is complete

@@ -1,0 +1,50 @@
+Source: https://github.com/isomorphisms/cockswain/actions/runs/35514843745/job/106088924028
+Fetched: 2026-09-28
+GitHub job conclusion: success
+GitHub evaluation step conclusion: success
+Evidence class: historical hosted live-model evaluation, not current-head acceptance
+Selection: exact timestamped status, provenance and metric lines; not the entire job log
+
+2026-09-20T13:53:58.5340334Z checkout_commit=0e951eb7a3e1c4cd95e464ef07801f52cfa4269a
+2026-09-20T13:53:58.5342459Z model_id=mistralai/Ministral-3-8B-Instruct-2512
+2026-09-20T13:53:58.5349157Z quantization=Q4_K_M
+2026-09-20T14:48:43.2076220Z ===== STATUS =====
+2026-09-20T14:48:43.2092591Z corpus_with=FAIL
+2026-09-20T14:48:43.2093319Z corpus_without=FAIL
+2026-09-20T14:48:43.2093757Z behavior_with=FAIL
+2026-09-20T14:48:43.2145776Z behavior_without=FAIL
+2026-09-20T14:48:43.2146352Z overall=1
+2026-09-20T14:48:43.2146722Z ===== CORPUS WITH HISTORY =====
+2026-09-20T14:48:43.2386622Z history_mode	with
+2026-09-20T14:48:43.2386809Z total	20
+2026-09-20T14:48:43.2386977Z correct	0
+2026-09-20T14:48:43.2387144Z false_done	0
+2026-09-20T14:48:43.2387324Z false_human	0
+2026-09-20T14:48:43.2387504Z invalid_output	20
+2026-09-20T14:48:43.2387714Z semantic_contract_failures	0
+2026-09-20T14:48:43.2387952Z ===== CORPUS WITHOUT HISTORY =====
+2026-09-20T14:48:43.2530821Z history_mode	without
+2026-09-20T14:48:43.2531012Z total	20
+2026-09-20T14:48:43.2531179Z correct	0
+2026-09-20T14:48:43.2531349Z false_done	0
+2026-09-20T14:48:43.2531527Z false_human	0
+2026-09-20T14:48:43.2531711Z invalid_output	20
+2026-09-20T14:48:43.2532025Z semantic_contract_failures	0
+2026-09-20T14:48:43.2532261Z ===== CORPUS ABLATION =====
+2026-09-20T14:48:43.2543316Z total	20
+2026-09-20T14:48:43.2544997Z ===== BEHAVIOR WITH HISTORY =====
+2026-09-20T14:48:43.2643126Z history_mode	with
+2026-09-20T14:48:43.2643318Z total	12
+2026-09-20T14:48:43.2643486Z correct	0
+2026-09-20T14:48:43.2643654Z false_done	0
+2026-09-20T14:48:43.2643829Z false_human	0
+2026-09-20T14:48:43.2644009Z invalid_output	12
+2026-09-20T14:48:43.2644212Z semantic_contract_failures	0
+2026-09-20T14:48:43.2644466Z ===== BEHAVIOR WITHOUT HISTORY =====
+2026-09-20T14:48:43.2724043Z history_mode	without
+2026-09-20T14:48:43.2724241Z total	12
+2026-09-20T14:48:43.2724406Z correct	0
+2026-09-20T14:48:43.2724573Z false_done	0
+2026-09-20T14:48:43.2724858Z false_human	0
+2026-09-20T14:48:43.2725042Z invalid_output	12
+2026-09-20T14:48:43.2725244Z semantic_contract_failures	0

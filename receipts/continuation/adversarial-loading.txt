@@ -1,0 +1,27 @@
+Command: env COCKSWAIN_SUPERVISOR_CMD=/bin/false COCKSWAIN_HISTORY_MODE=with bin/cockswain-behavior-eval tests/continuation
+Purpose: prove all 14 fixture inputs load and invalid outputs fail. No model called.
+Exit: 1 (expected)
+behavior_history_mode	with
+case	expected	actual	result
+01-interrupted-translation	CONTINUE	INVALID	FAIL
+02-false-completion	CONTINUE	INVALID	FAIL
+03-infrastructure-failure	CONTINUE	INVALID	FAIL
+04-green-unexercised	CONTINUE	INVALID	FAIL
+05-head-moved	CONTINUE	INVALID	FAIL
+06-dependency-landed	CONTINUE	INVALID	FAIL
+07-redesign-drift	CONTINUE	INVALID	FAIL
+08-material-choice	HUMAN	INVALID	FAIL
+09-uncommitted-work	CONTINUE	INVALID	FAIL
+10-duplicate-delivery	WAIT	INVALID	FAIL
+11-superseded	DONE	INVALID	FAIL
+12-cross-thread-correction	CONTINUE	INVALID	FAIL
+13-unknown-delivery	CONTINUE	INVALID	FAIL
+14-empty-discovery	CONTINUE	INVALID	FAIL
+
+history_mode	with
+total	14
+correct	0
+false_done	0
+false_human	0
+invalid_output	14
+semantic_contract_failures	0

@@ -1,0 +1,7 @@
+expected_action	CONTINUE
+goal	Finish the registered consumer after its named dependency lands.
+state	The exact named dependency has now merged and its retained acceptance evidence matches the required revision. The consumer is idle and its spec unchanged. Consumer compatibility still needs the already-specified test; no new design choice is present.
+unresolved	Refresh the consumer and run its required compatibility step, then continue remaining scoped work.
+done_when	Consumer acceptance, not merely dependency merge, is verified.
+required_output	consumer
+forbidden_output	dependency merge proves completion

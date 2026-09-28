@@ -1,0 +1,104 @@
+Cockswain source: 023b9395d477a4986e858e7a2196ea584653f449
+Observed: 2026-09-28
+Host: disposable workspace; local deterministic tests, not live model quality
+
+COMMAND: sh tests/test-corpus-cases.sh
+EXIT: 0
+case	expected_with	actual_with	expected_without	actual_without	expected_changed	actual_changed	result
+continue-batch-physical-failures	CONTINUE	CONTINUE	CONTINUE	CONTINUE	no	no	PASS
+continue-cockswain-no-bookkeeping--turn-1	CONTINUE	CONTINUE	HUMAN	HUMAN	yes	yes	PASS
+continue-cockswain-no-bookkeeping--turn-2	CONTINUE	CONTINUE	HUMAN	HUMAN	yes	yes	PASS
+continue-cockswain-no-bookkeeping--turn-3	CONTINUE	CONTINUE	HUMAN	HUMAN	yes	yes	PASS
+continue-cockswain-no-bookkeeping	CONTINUE	CONTINUE	HUMAN	HUMAN	yes	yes	PASS
+continue-dont-give-up	CONTINUE	CONTINUE	CONTINUE	CONTINUE	no	no	PASS
+continue-verbatim-corpus-correction--turn-2	CONTINUE	CONTINUE	HUMAN	HUMAN	yes	yes	PASS
+continue-verbatim-corpus-correction--turn-4	CONTINUE	CONTINUE	HUMAN	HUMAN	yes	yes	PASS
+continue-verbatim-corpus-correction--turn-6	CONTINUE	CONTINUE	HUMAN	HUMAN	yes	yes	PASS
+continue-verbatim-corpus-correction--turn-9	CONTINUE	CONTINUE	HUMAN	HUMAN	yes	yes	PASS
+continue-verbatim-corpus-correction	CONTINUE	CONTINUE	HUMAN	HUMAN	yes	yes	PASS
+done-close-thread	DONE	DONE	DONE	DONE	no	no	PASS
+done-oils-thread	DONE	DONE	DONE	DONE	no	no	PASS
+human-arm-thumb-reserved--turn-1	HUMAN	HUMAN	CONTINUE	CONTINUE	yes	yes	PASS
+human-arm-thumb-reserved--turn-2	HUMAN	HUMAN	CONTINUE	CONTINUE	yes	yes	PASS
+human-arm-thumb-reserved--turn-3	HUMAN	HUMAN	CONTINUE	CONTINUE	yes	yes	PASS
+human-arm-thumb-reserved	HUMAN	HUMAN	CONTINUE	CONTINUE	yes	yes	PASS
+human-tablet-physical	HUMAN	HUMAN	HUMAN	HUMAN	no	no	PASS
+wait-grease-current-head-ci	WAIT	WAIT	WAIT	WAIT	no	no	PASS
+wait-merge-ci	WAIT	WAIT	WAIT	WAIT	no	no	PASS
+
+total	20
+required_action_changes_total	13
+required_action_changes_correct	13
+missed_required_action_changes	0
+stable_action_total	7
+stable_action_correct	7
+spurious_action_changes	0
+PASS: verbatim corpus, two-sided history, turn prefixes, and paired ablation contract
+
+COMMAND: sh tests/test-behavior-cases.sh
+EXIT: 0
+PASS: privacy-reduced behavior cases and output-language grading
+
+COMMAND: sh tests/test-merge-state.sh
+EXIT: 0
+PASS	ready	CONTINUE	READY
+PASS	running-ci	WAIT	CI_PENDING
+PASS	physical	HUMAN	PHYSICAL_EXECUTION_REQUIRED
+PASS	authorization	HUMAN	HUMAN_AUTHORIZATION_REQUIRED
+PASS	promotable-draft	CONTINUE	DRAFT
+PASS	held-draft	WAIT	DRAFT
+PASS	decision-draft	HUMAN	DRAFT
+PASS	stale-follower	CONTINUE	FOLLOWER_STALE
+PASS	conflict-before-physical	CONTINUE	CONFLICT
+PASS	ambiguity-investigated	CONTINUE	AMBIGUOUS
+deterministic merge-state consumption passes
+
+COMMAND: sh tests/test-pr-retirement.sh
+EXIT: 0
+PASS: PR retirement keeps open work in the supervisory loop
+
+COMMAND: sh tests/test-authority-receipt.sh
+EXIT: 0
+PASS	task-authority-with-later-okay	AUTHORIZED
+PASS	acknowledgement-cannot-create-authority	UNKNOWN
+PASS	material-scope-change	UNKNOWN
+PASS	unrecoverable-context	UNKNOWN
+PASS	explicit-revocation	UNKNOWN
+PASS	unresolved-objection	UNKNOWN
+PASS	review-only-then-okay	NOT_AUTHORIZED
+PASS	classifier-revision-mismatch	fail-closed
+contextual authority receipt boundary passes
+
+COMMAND: sh tests/test-authority-decision.sh
+EXIT: 0
+PASS	authority-later-okay	AUTHORIZED
+PASS	review-only-okay	NOT_AUTHORIZED
+PASS	refreshed-same-scope	AUTHORIZED
+PASS	material-scope-change	UNKNOWN
+PASS	explicit-revocation	UNKNOWN
+PASS	unresolved-objection	UNKNOWN
+PASS	acknowledgement-cannot-create-authority	UNKNOWN
+PASS	assistant-cannot-create-authority	UNKNOWN
+PASS	unrecoverable-context	UNKNOWN
+PASS	target-digest-mismatch	fail-closed
+task-context authority collector acceptance passes
+
+COMMAND: sh tests/test-authority-collector.sh
+EXIT: 0
+PASS	authority-later-okay	AUTHORIZED
+PASS	review-only-okay	NOT_AUTHORIZED
+PASS	refreshed-same-scope	AUTHORIZED
+PASS	material-scope-change	UNKNOWN
+PASS	explicit-revocation	UNKNOWN
+PASS	unresolved-objection	UNKNOWN
+PASS	acknowledgement-cannot-create-authority	UNKNOWN
+PASS	assistant-cannot-create-authority	UNKNOWN
+PASS\tunsafe-record-id\tfail-closed
+PASS\tprivate-objection-text\tfail-closed
+PASS	unrecoverable-context	UNKNOWN
+PASS	target-digest-mismatch	fail-closed
+live task-context authority collector acceptance passes
+
+COMMAND: sh tests/test-dispatch.sh
+EXIT: 1
+FAIL: bin/cockswain-dispatch is not implemented yet

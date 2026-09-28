@@ -1,0 +1,7 @@
+expected_action	CONTINUE
+goal	Find unfinished registered work within the stated discovery scope.
+state	The collector returned zero rows but no completeness receipt; a page request failed. The repository and collector are reachable. No evidence establishes absence of open work.
+unresolved	Recollect the failed scope; do not declare completion.
+done_when	Complete scoped observation exists.
+required_output	collect
+forbidden_output	no work remains

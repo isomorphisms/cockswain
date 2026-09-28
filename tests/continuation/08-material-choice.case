@@ -1,0 +1,7 @@
+expected_action	HUMAN
+goal	Implement the user-selected persistence semantics.
+state	Read-only investigation is complete. Two incompatible durability guarantees remain possible; the job and all recovered corrections select neither. No implementation step can advance without choosing that promised behavior.
+unresolved	Ask which durability guarantee is intended.
+done_when	Human selects the missing semantic guarantee.
+required_output	durability
+forbidden_output	choose whichever is easiest

@@ -1,0 +1,21 @@
+Fixture: tests/continuation-negative/incomplete-account
+Observation date: 2026-09-28
+
+Main source: 023b9395d477a4986e858e7a2196ea584653f449
+Command: sh bin/cockswain-pr-retirement tests/continuation-negative/incomplete-account
+Exit: 0
+action	DONE
+reason_code	NO_OPEN_PRS
+repository	-
+pr	-
+head	-
+next_action	-
+detail	all-discovered-prs-retired
+
+Proposal source: 91ecea554fd34713a3d59df500fdbb6a8c0974be
+Command: sh bin/cockswain-pr-retirement <same absolute fixture directory>
+Exit: 66
+cockswain: missing account completion record; recollect with ai-ci
+
+Interpretation: main emits unsupported DONE; proposal rejects missing completion record.
+Not a live account sweep; not a proof of collection freshness or global completeness.
