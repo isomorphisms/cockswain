@@ -39,6 +39,8 @@ missing prior context fails closed.
 
 DONE is provisional. The controller must independently verify objective completion state before retiring the work item.
 
+A human-confirmed flaw in an agent-written test creates a durable follower graph, not a one-test repair. Keep supervising the concrete repair, fleet-wide semantic sibling search, root-cause/generator investigation, and blast-radius landmark checks after shared fixes. Do not return DONE while relevant followers remain unresolved or while expected landmarks were not actually rerun. See issue #32 and isomorphisms/ai-ci#183.
+
 A pull request opened or materially advanced by supervised work is a durable
 obligation, not a completion token. Keep rediscovering its live state until it is
 merged, closed/superseded, waiting on a concrete external boundary, or explicitly
