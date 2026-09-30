@@ -1,0 +1,68 @@
+name: Black Ball company directory watch
+
+on:
+  schedule:
+    - cron: "17 14 * * 1,4"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Black Ball directory activity
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_API: https://api.github.com/repos/bl4ckb4ll/blackball/issues/134
+          WATCH_ISSUE: "35"
+        run: |
+          set -euo pipefail
+
+          target=$(curl -fsSL             -H 'Accept: application/vnd.github+json'             "$TARGET_API")
+
+          state=$(jq -r '.state' <<<"$target")
+          updated_at=$(jq -r '.updated_at' <<<"$target")
+          now=$(date -u +%s)
+          updated=$(date -u -d "$updated_at" +%s)
+          age_days=$(( (now - updated) / 86400 ))
+
+          # Recent target activity means the directory is already moving.
+          if [[ "$state" == "open" && "$age_days" -lt 7 ]]; then
+            printf 'Black Ball #134 is fresh: updated %s (%s days ago).\n'               "$updated_at" "$age_days"
+            exit 0
+          fi
+
+          # Check twice a week, but do not emit duplicate reminder noise.
+          marker='<!-- cockswain:blackball-company-directory-watch -->'
+          comments=$(gh api             "repos/$GITHUB_REPOSITORY/issues/$WATCH_ISSUE/comments?per_page=100")
+          last_reminder=$(jq -r --arg marker "$marker"             '[.[] | select(.body | contains($marker)) | .created_at] | max // empty'             <<<"$comments")
+
+          if [[ -n "$last_reminder" ]]; then
+            last_epoch=$(date -u -d "$last_reminder" +%s)
+            if (( now - last_epoch < 6 * 86400 )); then
+              printf 'A watcher reminder was already posted at %s.\n'                 "$last_reminder"
+              exit 0
+            fi
+          fi
+
+          if [[ "$state" != "open" ]]; then
+            reason="the target issue is $state; closure needs coverage review"
+          else
+            reason="the target issue has had no update for $age_days days"
+          fi
+
+          body=$(cat <<EOF
+          $marker
+          Cockswain watch: Black Ball company-directory work needs another pass because $reason.
+
+          Continue from **company → department/business unit → hiring or budget authority → what that authority needs/values**. Pick the next concrete coverage gap: add a company, deepen a company's departmental map, identify or correct an authority chain, or record an evidence gap with a next research step.
+
+          Target: bl4ckb4ll/blackball#134
+          EOF
+          )
+
+          gh issue comment "$WATCH_ISSUE"             --repo "$GITHUB_REPOSITORY"             --body "$body"
