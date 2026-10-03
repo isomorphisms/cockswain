@@ -1,0 +1,175 @@
+name: First live model evaluation
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  evaluate:
+    name: ${{ matrix.label }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: gpt-oss-20b
+            model_id: openai/gpt-oss-20b
+            hf_repo: ggml-org/gpt-oss-20b-GGUF
+            hf_file: gpt-oss-20b-MXFP4.gguf
+            send_reasoning: "1"
+            quantization: MXFP4
+          - label: qwen3-4b-instruct-2507
+            model_id: Qwen/Qwen3-4B-Instruct-2507
+            hf_repo: bartowski/Qwen_Qwen3-4B-Instruct-2507-GGUF
+            hf_file: Qwen_Qwen3-4B-Instruct-2507-Q8_0.gguf
+            send_reasoning: "0"
+            quantization: Q8_0
+          - label: ministral-3-8b-instruct-2512
+            model_id: mistralai/Ministral-3-8B-Instruct-2512
+            hf_repo: mistralai/Ministral-3-8B-Instruct-2512-GGUF
+            hf_file: Ministral-3-8B-Instruct-2512-Q8_0.gguf
+            send_reasoning: "0"
+            quantization: Q8_0
+          - label: phi-4-reasoning-plus
+            model_id: microsoft/Phi-4-reasoning-plus
+            hf_repo: lmstudio-community/Phi-4-reasoning-plus-GGUF
+            hf_file: Phi-4-reasoning-plus-Q4_K_M.gguf
+            send_reasoning: "0"
+            quantization: Q4_K_M
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+
+      - name: Record runner and candidate provenance
+        env:
+          MODEL_ID: ${{ matrix.model_id }}
+          HF_REPO: ${{ matrix.hf_repo }}
+          HF_FILE: ${{ matrix.hf_file }}
+          QUANTIZATION: ${{ matrix.quantization }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          mkdir -p eval-live
+          {
+            echo "base_commit=$BASE_SHA"
+            echo "eval_commit=$HEAD_SHA"
+            echo "checkout_commit=$(git rev-parse HEAD)"
+            echo "model_id=$MODEL_ID"
+            echo "hf_repo=$HF_REPO"
+            echo "hf_file=$HF_FILE"
+            echo "quantization=$QUANTIZATION"
+            uname -a
+            free -h
+            df -h /
+          } | tee eval-live/provenance.txt
+
+      - name: Install llama.cpp
+        run: |
+          curl -LsSf https://llama.app/install.sh | sh
+          export PATH="$HOME/.local/bin:$HOME/.llama/bin:$PATH"
+          command -v llama
+          llama --version | tee -a eval-live/provenance.txt
+          printf '%s\n' "$HOME/.local/bin" "$HOME/.llama/bin" >> "$GITHUB_PATH"
+
+      - name: Start model server
+        env:
+          MODEL_ID: ${{ matrix.model_id }}
+          HF_REPO: ${{ matrix.hf_repo }}
+          HF_FILE: ${{ matrix.hf_file }}
+        run: |
+          set -eu
+          mkdir -p "$RUNNER_TEMP/llama-cache"
+          nohup llama serve             --hf-repo "$HF_REPO"             --hf-file "$HF_FILE"             --alias "$MODEL_ID"             --host 127.0.0.1             --port 8000             --ctx-size 16384             --parallel 1             --n-predict 2048             --reasoning-effort high             --jinja             --no-webui             > eval-live/server.log 2>&1 &
+          echo $! > eval-live/server.pid
+
+          ready=0
+          i=0
+          while [ "$i" -lt 360 ]; do
+            if curl -fsS http://127.0.0.1:8000/health > eval-live/health.json 2>/dev/null; then
+              ready=1
+              break
+            fi
+            if ! kill -0 "$(cat eval-live/server.pid)" 2>/dev/null; then
+              echo "server exited before readiness" >&2
+              tail -200 eval-live/server.log >&2 || true
+              exit 1
+            fi
+            i=$((i + 1))
+            sleep 5
+          done
+          [ "$ready" -eq 1 ] || {
+            echo "server did not become ready" >&2
+            tail -200 eval-live/server.log >&2 || true
+            exit 1
+          }
+          curl -fsS http://127.0.0.1:8000/v1/models | tee eval-live/models.json
+          df -h / | tee -a eval-live/provenance.txt
+
+      - name: Run public corpus and behavior evaluation
+        env:
+          MODEL_ID: ${{ matrix.model_id }}
+          SEND_REASONING: ${{ matrix.send_reasoning }}
+        run: |
+          set -u
+          export COCKSWAIN_MODEL="$MODEL_ID"
+          export COCKSWAIN_BASE_URL=http://127.0.0.1:8000/v1
+          export COCKSWAIN_SEND_REASONING_EFFORT="$SEND_REASONING"
+
+          overall=0
+          for mode in with without; do
+            if COCKSWAIN_HISTORY_MODE="$mode" bin/cockswain-corpus-eval > "eval-live/corpus-$mode.tsv" 2>&1; then
+              echo "corpus_$mode=PASS" >> eval-live/status.txt
+            else
+              echo "corpus_$mode=FAIL" >> eval-live/status.txt
+              overall=1
+            fi
+          done
+
+          bin/cockswain-ablation-report             eval-live/corpus-with.tsv             eval-live/corpus-without.tsv             > eval-live/corpus-ablation.tsv 2>&1 || overall=1
+
+          for mode in with without; do
+            if COCKSWAIN_HISTORY_MODE="$mode" bin/cockswain-behavior-eval > "eval-live/behavior-$mode.tsv" 2>&1; then
+              echo "behavior_$mode=PASS" >> eval-live/status.txt
+            else
+              echo "behavior_$mode=FAIL" >> eval-live/status.txt
+              overall=1
+            fi
+          done
+
+          echo "overall=$overall" >> eval-live/status.txt
+
+          echo "===== STATUS ====="
+          cat eval-live/status.txt
+          echo "===== CORPUS WITH HISTORY ====="
+          cat eval-live/corpus-with.tsv
+          echo "===== CORPUS WITHOUT HISTORY ====="
+          cat eval-live/corpus-without.tsv
+          echo "===== CORPUS ABLATION ====="
+          cat eval-live/corpus-ablation.tsv
+          echo "===== BEHAVIOR WITH HISTORY ====="
+          cat eval-live/behavior-with.tsv
+          echo "===== BEHAVIOR WITHOUT HISTORY ====="
+          cat eval-live/behavior-without.tsv
+
+      - name: Stop model server
+        if: always()
+        run: |
+          if [ -f eval-live/server.pid ]; then
+            kill "$(cat eval-live/server.pid)" 2>/dev/null || true
+          fi
+
+      - name: Upload evaluation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cockswain-live-${{ matrix.label }}
+          path: eval-live/
+          if-no-files-found: warn
