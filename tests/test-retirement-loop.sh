@@ -56,7 +56,19 @@ while IFS= read -r pr; do
         'scope_state\tsame' \
         "receipt_ref\tfixture-authority-$pr" \
         'action\trefresh-authorization' > "$snapshot/authorization.tsv"
-    printf 'isomorphisms/example\t%s\tREADY\n' "$pr" >> "$output/managed/results.tsv"
+    result=READY
+    if [ -f "$LOOP_TEST_STATE/failed-once" ]; then
+        case $(cat "$LOOP_TEST_STATE/mode") in
+            failure-becomes-human)
+                if [ "$pr" = 1 ]; then
+                    result=BLOCKED
+                    printf 'status\tcode\tobject_kind\tobject_ref\thead\taction\tdetail\n' > "$snapshot/result.tsv"
+                    printf 'BLOCKED\tPHYSICAL_EXECUTION_REQUIRED\tpr\tisomorphisms/example#%s\t%s\tphysical-device\tphysical-acceptance-required\n' "$pr" "$head" >> "$snapshot/result.tsv"
+                fi
+                ;;
+        esac
+    fi
+    printf 'isomorphisms/example\t%s\t%s\n' "$pr" "$result" >> "$output/managed/results.tsv"
     count=$((count + 1))
 done < "$LOOP_TEST_STATE/prs"
 
@@ -100,8 +112,19 @@ action=$(value "$request" action)
 printf '%s\t%s\n' "$pr" "$head" >> "$LOOP_TEST_STATE/actions.log"
 mode=$(cat "$LOOP_TEST_STATE/mode")
 
-if [ "$mode" = retry-once ] && [ "$pr" = 1 ] && [ ! -f "$LOOP_TEST_STATE/failed-once" ]; then
+should_fail=no
+case "$mode:$pr" in
+    retry-once:1|failure-becomes-human:1|failure-disappears:1|failure-priority:2) should_fail=yes ;;
+esac
+if [ "$should_fail" = yes ] && [ ! -f "$LOOP_TEST_STATE/failed-once" ]; then
     : > "$LOOP_TEST_STATE/failed-once"
+    if [ "$mode" = failure-priority ]; then
+        printf '%s\n' 1 2 > "$LOOP_TEST_STATE/prs"
+        printf '%s\n' "$head" > "$LOOP_TEST_STATE/head-1"
+    fi
+    if [ "$mode" = failure-disappears ]; then
+        : > "$LOOP_TEST_STATE/done-$pr"
+    fi
     printf '%b\n' \
         'schema\tcockswain-retirement-action-result-v1' \
         'status\tFAILED' \
@@ -211,6 +234,28 @@ assert_field "$work/stale-head.out" state BLOCKED
 assert_field "$work/stale-head.out" reason_code RETIREMENT_ACTION_STALE
 test "$(receipt_count "$run/actions")" -eq 2
 grep -F 'error_class	HEAD_CHANGED_BEFORE_RETRY' "$run/actions/2.tsv" >/dev/null
+test "$(wc -l < "$state/actions.log")" -eq 1
+
+# A failed PR changing classification cannot hide behind another READY PR.
+setup_case changed-state failure-becomes-human '1 2' 0
+run_controller "$state" "$run" "$work/changed-state.out"
+assert_field "$work/changed-state.out" state BLOCKED
+assert_field "$work/changed-state.out" reason_code RETIREMENT_FAILED_ACTION_STATE_CHANGED
+test "$(wc -l < "$state/actions.log")" -eq 1
+assert_field "$run/actions/1.tsv" write_status FAILED
+
+# A newly discovered READY row cannot displace the durable failed write.
+setup_case failure-priority failure-priority '2' 0
+run_controller "$state" "$run" "$work/failure-priority.out"
+assert_field "$work/failure-priority.out" state DONE
+awk -F '\t' 'NR==1 && $1==2 {first=1} NR==2 && $1==2 {second=1} NR==3 && $1==1 {third=1} END {exit !(first && second && third && NR==3)}' "$state/actions.log"
+
+# An uncertain failed write disappearing from open state requires explicit
+# reconciliation; an empty recollection is not evidence of a successful write.
+setup_case disappeared failure-disappears '1' 0
+run_controller "$state" "$run" "$work/disappeared.out"
+assert_field "$work/disappeared.out" state BLOCKED
+assert_field "$work/disappeared.out" reason_code RETIREMENT_FAILED_ACTION_REQUIRES_RECONCILIATION
 test "$(wc -l < "$state/actions.log")" -eq 1
 
 # A reported merge is not enough.  The following complete collection must show
