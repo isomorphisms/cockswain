@@ -372,6 +372,53 @@ previous_failed_action() {
     done
 }
 
+# Durable failures are supervisor state even if the selector would now choose
+# another PR, classify the failed PR differently, or report an empty queue.
+prioritize_unresolved_failure() {
+    index=$work/action-history.tsv
+    : > "$index"
+    for receipt in "$action_receipt_directory"/*.tsv; do
+        [ -f "$receipt" ] || continue
+        validate_key_value_file "$receipt" || return 1
+        [ "$(require_value "$receipt" schema)" = cockswain-retirement-action-receipt-v1 ] || return 1
+        attempt=$(require_value "$receipt" attempt_id)
+        is_count "$attempt" || return 1
+        printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
+            "$attempt" "$(require_value "$receipt" repository)" \
+            "$(require_value "$receipt" pr)" "$(require_value "$receipt" write_status)" \
+            "$(require_value "$receipt" action)" "$receipt" >> "$index"
+    done
+    pending=$(awk -F '\t' '
+        { key=$2 FS $3; if ($1+0 > latest[key]+0) { latest[key]=$1; status[key]=$4; row[key]=$0 } }
+        END { for (key in latest) if (status[key] == "FAILED" || status[key] == "REFUSED")
+            if (!chosen || latest[key]+0 < chosen+0) { chosen=latest[key]; result=row[key] }
+            if (chosen) print result }
+    ' "$index")
+    [ -n "$pending" ] || return 0
+    pending_repository=$(printf '%s\n' "$pending" | cut -f2)
+    pending_pr=$(printf '%s\n' "$pending" | cut -f3)
+    pending_action=$(printf '%s\n' "$pending" | cut -f5)
+    last_action_receipt=$(printf '%s\n' "$pending" | cut -f6)
+    state=$(awk -F '\t' -v repository="$pending_repository" -v pr="$pending_pr" \
+        'NR>1 && $1==repository && $2==pr { print $3; found++ } END { if (found!=1) exit 1 }' \
+        "$collection/managed/results.tsv") || {
+        emit_result BLOCKED RETIREMENT_FAILED_ACTION_REQUIRES_RECONCILIATION
+        return 2
+    }
+    if [ "$state" != READY ]; then
+        emit_result BLOCKED RETIREMENT_FAILED_ACTION_STATE_CHANGED
+        return 2
+    fi
+    selected_repository=$pending_repository
+    selected_pr=$pending_pr
+    slug=$(printf '%s-%s' "$selected_repository" "$selected_pr" | tr '/' '-')
+    selected_head=$(require_value "$collection/managed/$slug/pr.tsv" head_sha)
+    selected_action=CONTINUE
+    selected_reason=READY
+    selected_next_action=$pending_action
+    selected_detail=retry-durable-failed-action
+}
+
 previous_successful_action() {
     successful_head=-
     for receipt in "$action_receipt_directory"/*.tsv; do
@@ -522,6 +569,15 @@ while :; do
         exit 0
     fi
     record_collection "$collection_sequence" "$collection" "$decision"
+
+    failure_priority_status=0
+    prioritize_unresolved_failure || failure_priority_status=$?
+    if [ "$failure_priority_status" -eq 2 ]; then
+        exit 0
+    elif [ "$failure_priority_status" -ne 0 ]; then
+        emit_result BLOCKED RETIREMENT_ACTION_HISTORY_INVALID
+        exit 0
+    fi
 
     if [ "$selected_action" = DONE ]; then
         emit_result DONE "$selected_reason"

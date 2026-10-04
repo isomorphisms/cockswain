@@ -104,6 +104,12 @@ rechecks the exact head and authority immediately before mutation, and writes a
 strict `cockswain-retirement-action-result-v1` result to stdout. The controller
 records only digest-bound command output, not credentials or raw command logs.
 
+Unresolved failed writes take priority before accepting the next selector
+decision. A changed classification or disappearance from the open collection
+requires reconciliation of that recorded attempt; neither can erase the failure
+or produce `DONE`. A current READY failed write is retried before other READY
+rows, within the bounded retry limit and with the same exact-head safeguards.
+
 Each complete collection receives a durable receipt under
 `RUN_DIRECTORY/collection-receipts/`: timestamp, collection scope/digest, open
 PR count, `NORMAL`/`WARNING`/`OVER_BUDGET` queue state, threshold transition,
