@@ -1,0 +1,633 @@
+#!/bin/sh
+set -eu
+
+# Drive the one-action retirement selector until it reaches a real boundary.
+# Collection and mutation stay behind explicit commands because ai-ci owns the
+# current GitHub/policy collection and the caller owns the credentialed write
+# path.  The commands are deliberately narrow:
+#
+#   COCKSWAIN_RETIREMENT_COLLECT_CMD OUTPUT_DIRECTORY
+#   COCKSWAIN_RETIREMENT_ACTION_CMD REQUEST.tsv
+#
+# The collector must produce ai-ci's complete account collection.  The action
+# command must recheck the request's exact head and authority immediately before
+# mutation, then emit cockswain-retirement-action-result-v1 on stdout.
+
+apply=no
+if [ "${1:-}" = --apply ]; then
+    apply=yes
+    shift
+fi
+
+[ "$#" -eq 1 ] || {
+    echo 'usage: cockswain-retirement-loop [--apply] RUN_DIRECTORY' >&2
+    exit 64
+}
+
+run_directory=$1
+script_directory=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+selector=${COCKSWAIN_RETIREMENT_SELECTOR:-"$script_directory/cockswain-pr-retirement"}
+collect_command=${COCKSWAIN_RETIREMENT_COLLECT_CMD:-}
+action_command=${COCKSWAIN_RETIREMENT_ACTION_CMD:-}
+retry_limit=${COCKSWAIN_RETIREMENT_RETRY_LIMIT:-2}
+action_limit=${COCKSWAIN_RETIREMENT_ACTION_LIMIT:-1000}
+
+# Receipts may carry a provider's bounded error message.  Keep run state local
+# by default; public GitHub evidence should cite the receipt/digest deliberately.
+umask 077
+
+for command_name in awk date mkdir mv sha256sum; do
+    command -v "$command_name" >/dev/null 2>&1 || {
+        printf 'cockswain: %s is required\n' "$command_name" >&2
+        exit 69
+    }
+done
+
+[ -x "$selector" ] || {
+    printf 'cockswain: selector is not executable: %s\n' "$selector" >&2
+    exit 66
+}
+[ -n "$collect_command" ] && [ -x "$collect_command" ] || {
+    echo 'cockswain: set COCKSWAIN_RETIREMENT_COLLECT_CMD to an executable complete-account collector' >&2
+    exit 69
+}
+if [ "$apply" = yes ]; then
+    [ -n "$action_command" ] && [ -x "$action_command" ] || {
+        echo 'cockswain: --apply requires COCKSWAIN_RETIREMENT_ACTION_CMD' >&2
+        exit 69
+    }
+fi
+
+is_count() {
+    printf '%s\n' "$1" | awk '$0 ~ /^(0|[1-9][0-9]*)$/ { ok=1 } END { exit !ok }'
+}
+
+is_pr_number() {
+    printf '%s\n' "$1" | awk '$0 ~ /^[1-9][0-9]*$/ { ok=1 } END { exit !ok }'
+}
+
+is_head() {
+    printf '%s\n' "$1" | awk 'length($0)==40 && $0 ~ /^[0-9a-f]+$/ { ok=1 } END { exit !ok }'
+}
+
+is_token() {
+    printf '%s\n' "$1" | awk 'length($0)>0 && $0 ~ /^[A-Za-z0-9._:/@+-]+$/ { ok=1 } END { exit !ok }'
+}
+
+is_count "$retry_limit" || {
+    echo 'cockswain: COCKSWAIN_RETIREMENT_RETRY_LIMIT must be a nonnegative integer' >&2
+    exit 64
+}
+is_count "$action_limit" && [ "$action_limit" -gt 0 ] || {
+    echo 'cockswain: COCKSWAIN_RETIREMENT_ACTION_LIMIT must be a positive integer' >&2
+    exit 64
+}
+
+validate_key_value_file() {
+    awk -F '\t' '
+        NF != 2 || $1 == "" || $2 == "" || seen[$1]++ { bad=1 }
+        END { exit bad }
+    ' "$1"
+}
+
+read_value() {
+    file=$1
+    key=$2
+    awk -F '\t' -v wanted="$key" '
+        $1 == wanted {
+            if (found++) exit 2
+            value=$2
+        }
+        END {
+            if (found != 1) exit 1
+            print value
+        }
+    ' "$file"
+}
+
+require_value() {
+    file=$1
+    key=$2
+    value=$(read_value "$file" "$key") || {
+        printf 'cockswain: missing or duplicate %s in %s\n' "$key" "$file" >&2
+        exit 65
+    }
+    printf '%s\n' "$value"
+}
+
+digest() {
+    sha256sum "$1" | awk '{print $1}'
+}
+
+timestamp() {
+    date -u '+%Y-%m-%dT%H:%M:%SZ'
+}
+
+queue_state_for() {
+    count=$1
+    if [ "$count" -ge 100 ]; then
+        printf '%s\n' OVER_BUDGET
+    elif [ "$count" -ge 90 ]; then
+        printf '%s\n' WARNING
+    else
+        printf '%s\n' NORMAL
+    fi
+}
+
+next_sequence() {
+    directory=$1
+    sequence=1
+    while [ -e "$directory/$sequence.tsv" ]; do
+        sequence=$((sequence + 1))
+    done
+    printf '%s\n' "$sequence"
+}
+
+next_collection_sequence() {
+    sequence=1
+    while [ -e "$collection_receipt_directory/$sequence.tsv" ] ||
+          [ -e "$collection_directory/$sequence" ]; do
+        sequence=$((sequence + 1))
+    done
+    printf '%s\n' "$sequence"
+}
+
+collection_directory=$run_directory/collections
+collection_receipt_directory=$run_directory/collection-receipts
+action_receipt_directory=$run_directory/actions
+queue_state_file=$run_directory/queue-state.tsv
+mkdir -p "$collection_directory" "$collection_receipt_directory" "$action_receipt_directory"
+
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT HUP INT TERM
+
+last_collection_receipt=-
+last_action_receipt=-
+collections_observed=0
+actions_attempted=0
+
+emit_result() {
+    final_state=$1
+    final_reason=$2
+    printf 'schema\tcockswain-retirement-loop-result-v1\n'
+    printf 'state\t%s\n' "$final_state"
+    printf 'reason_code\t%s\n' "$final_reason"
+    printf 'collections_observed\t%s\n' "$collections_observed"
+    printf 'actions_attempted\t%s\n' "$actions_attempted"
+    printf 'last_collection_receipt\t%s\n' "$last_collection_receipt"
+    printf 'last_action_receipt\t%s\n' "$last_action_receipt"
+    printf 'queue_state\t%s\n' "${selected_queue_state:--}"
+    printf 'queue_count\t%s\n' "${selected_queue_count:--}"
+}
+
+write_collection_failure() {
+    sequence=$1
+    collection=$2
+    failure_kind=$3
+    failure_status=$4
+    stdout_file=$5
+    stderr_file=$6
+    receipt=$collection_receipt_directory/$sequence.tsv
+    temporary=$receipt.$$.tmp
+    now=$(timestamp)
+    {
+        printf 'schema\tcockswain-retirement-collection-receipt-v1\n'
+        printf 'sequence\t%s\n' "$sequence"
+        printf 'observed_at\t%s\n' "$now"
+        printf 'status\tFAILED\n'
+        printf 'failure_class\t%s\n' "$failure_kind"
+        printf 'exit_status\t%s\n' "$failure_status"
+        printf 'collection_directory\t%s\n' "$collection"
+        printf 'stdout_sha256\t%s\n' "$(digest "$stdout_file")"
+        printf 'stderr_sha256\t%s\n' "$(digest "$stderr_file")"
+    } > "$temporary"
+    mv "$temporary" "$receipt"
+    last_collection_receipt=$receipt
+}
+
+load_selected_decision() {
+    decision_file=$1
+    collection=$2
+    validate_key_value_file "$decision_file" || {
+        echo 'cockswain: selector emitted malformed key/value output' >&2
+        return 1
+    }
+
+    selected_action=$(read_value "$decision_file" action) || return 1
+    selected_reason=$(read_value "$decision_file" reason_code) || return 1
+    selected_repository=$(read_value "$decision_file" repository) || return 1
+    selected_pr=$(read_value "$decision_file" pr) || return 1
+    selected_head=$(read_value "$decision_file" head) || return 1
+    selected_next_action=$(read_value "$decision_file" next_action) || return 1
+    selected_detail=$(read_value "$decision_file" detail) || return 1
+    selected_scope=$(read_value "$decision_file" collection_scope) || return 1
+    selected_collection_digest=$(read_value "$decision_file" collection_digest) || return 1
+    selected_queue_count=$(read_value "$decision_file" queue_count) || return 1
+    selected_queue_state=$(read_value "$decision_file" queue_state) || return 1
+
+    actual_collection_digest=$(digest "$collection/collection.tsv")
+    actual_scope=$(read_value "$collection/collection.tsv" scope) || return 1
+    actual_queue_count=$(read_value "$collection/collection.tsv" expected_prs) || return 1
+    is_count "$actual_queue_count" || return 1
+    expected_queue_state=$(queue_state_for "$actual_queue_count")
+
+    [ "$selected_collection_digest" = "$actual_collection_digest" ] &&
+    [ "$selected_scope" = "$actual_scope" ] &&
+    [ "$selected_queue_count" = "$actual_queue_count" ] &&
+    [ "$selected_queue_state" = "$expected_queue_state" ] || return 1
+
+    case "$selected_action" in CONTINUE|WAIT|HUMAN|DONE) ;; *) return 1 ;; esac
+    case "$selected_queue_state" in NORMAL|WARNING|OVER_BUDGET) ;; *) return 1 ;; esac
+}
+
+record_collection() {
+    sequence=$1
+    collection=$2
+    decision_file=$3
+    receipt=$collection_receipt_directory/$sequence.tsv
+    temporary=$receipt.$$.tmp
+    now=$(timestamp)
+    old_state=-
+    old_above_since=-
+
+    if [ -f "$queue_state_file" ]; then
+        validate_key_value_file "$queue_state_file" || {
+            echo 'cockswain: existing queue state is malformed' >&2
+            exit 65
+        }
+        [ "$(require_value "$queue_state_file" schema)" = cockswain-retirement-queue-state-v1 ] || {
+            echo 'cockswain: unsupported existing queue state schema' >&2
+            exit 65
+        }
+        old_state=$(require_value "$queue_state_file" queue_state)
+        old_above_since=$(require_value "$queue_state_file" above_budget_since)
+        case "$old_state" in NORMAL|WARNING|OVER_BUDGET) ;; *) exit 65 ;; esac
+    fi
+
+    case "$old_state:$selected_queue_state" in
+        -:NORMAL) transition=INITIAL_NORMAL ;;
+        -:WARNING) transition=INITIAL_WARNING ;;
+        -:OVER_BUDGET) transition=INITIAL_OVER_BUDGET ;;
+        NORMAL:NORMAL) transition=REMAINED_NORMAL ;;
+        NORMAL:WARNING) transition=ENTERED_WARNING ;;
+        NORMAL:OVER_BUDGET) transition=ENTERED_OVER_BUDGET ;;
+        WARNING:NORMAL) transition=EXITED_WARNING ;;
+        WARNING:WARNING) transition=REMAINED_WARNING ;;
+        WARNING:OVER_BUDGET) transition=ENTERED_OVER_BUDGET ;;
+        OVER_BUDGET:NORMAL) transition=EXITED_OVER_BUDGET ;;
+        OVER_BUDGET:WARNING) transition=EXITED_OVER_BUDGET_TO_WARNING ;;
+        OVER_BUDGET:OVER_BUDGET) transition=REMAINED_OVER_BUDGET ;;
+        *) echo 'cockswain: cannot derive queue threshold transition' >&2; exit 65 ;;
+    esac
+
+    above_since=-
+    if [ "$selected_queue_state" = OVER_BUDGET ]; then
+        if [ "$old_state" = OVER_BUDGET ] && [ "$old_above_since" != - ]; then
+            above_since=$old_above_since
+        else
+            above_since=$now
+        fi
+    fi
+
+    {
+        printf 'schema\tcockswain-retirement-collection-receipt-v1\n'
+        printf 'sequence\t%s\n' "$sequence"
+        printf 'observed_at\t%s\n' "$now"
+        printf 'status\tCOMPLETE\n'
+        printf 'collection_scope\t%s\n' "$selected_scope"
+        printf 'collection_digest\t%s\n' "$selected_collection_digest"
+        printf 'queue_count\t%s\n' "$selected_queue_count"
+        printf 'queue_state\t%s\n' "$selected_queue_state"
+        printf 'queue_transition\t%s\n' "$transition"
+        printf 'above_budget_since\t%s\n' "$above_since"
+        printf 'selector_sha256\t%s\n' "$(digest "$decision_file")"
+    } > "$temporary"
+    mv "$temporary" "$receipt"
+    last_collection_receipt=$receipt
+
+    temporary=$queue_state_file.$$.tmp
+    {
+        printf 'schema\tcockswain-retirement-queue-state-v1\n'
+        printf 'last_collection_receipt\t%s\n' "$receipt"
+        printf 'queue_state\t%s\n' "$selected_queue_state"
+        printf 'queue_count\t%s\n' "$selected_queue_count"
+        printf 'above_budget_since\t%s\n' "$above_since"
+    } > "$temporary"
+    mv "$temporary" "$queue_state_file"
+}
+
+load_authority_observation() {
+    collection=$1
+    slug=$(printf '%s-%s' "$selected_repository" "$selected_pr" | tr '/' '-')
+    authorization_file=$collection/managed/$slug/authorization.tsv
+    [ -f "$authorization_file" ] || return 1
+    validate_key_value_file "$authorization_file" || return 1
+    [ "$(read_value "$authorization_file" schema)" = aici-merge-authorization-observation-v1 ] || return 1
+    authority_state=$(read_value "$authorization_file" state) || return 1
+    authority_head=$(read_value "$authorization_file" head_sha) || return 1
+    authority_kind=$(read_value "$authorization_file" authority_kind) || return 1
+    authority_scope_state=$(read_value "$authorization_file" scope_state) || return 1
+    authority_receipt_ref=$(read_value "$authorization_file" receipt_ref) || return 1
+    authority_action=$(read_value "$authorization_file" action) || return 1
+    [ "$authority_state" = valid ] &&
+    [ "$authority_head" = "$selected_head" ] &&
+    [ "$authority_scope_state" = same ] &&
+    is_token "$authority_kind" &&
+    is_token "$authority_receipt_ref" &&
+    is_token "$authority_action"
+}
+
+previous_failed_action() {
+    failed_head=-
+    failed_count=0
+    failed_retryable=no
+    receipt_found=no
+    for receipt in "$action_receipt_directory"/*.tsv; do
+        [ -f "$receipt" ] || continue
+        validate_key_value_file "$receipt" || {
+            printf 'cockswain: malformed durable action receipt: %s\n' "$receipt" >&2
+            exit 65
+        }
+        receipt_repository=$(require_value "$receipt" repository)
+        receipt_pr=$(require_value "$receipt" pr)
+        receipt_status=$(require_value "$receipt" write_status)
+        [ "$receipt_repository" = "$selected_repository" ] &&
+        [ "$receipt_pr" = "$selected_pr" ] || continue
+        [ "$receipt_status" = FAILED ] || continue
+        receipt_head=$(require_value "$receipt" expected_head)
+        receipt_retryable=$(require_value "$receipt" retryable)
+        [ "$receipt_head" = - ] || is_head "$receipt_head" || {
+            printf 'cockswain: invalid expected head in durable action receipt: %s\n' "$receipt" >&2
+            exit 65
+        }
+        if [ "$receipt_found" = no ] || [ "$receipt_head" = "$failed_head" ]; then
+            if [ "$receipt_found" = no ]; then
+                failed_head=$receipt_head
+                failed_count=0
+            fi
+            failed_count=$((failed_count + 1))
+            failed_retryable=$receipt_retryable
+            receipt_found=yes
+        fi
+    done
+}
+
+previous_successful_action() {
+    successful_head=-
+    for receipt in "$action_receipt_directory"/*.tsv; do
+        [ -f "$receipt" ] || continue
+        validate_key_value_file "$receipt" || {
+            printf 'cockswain: malformed durable action receipt: %s\n' "$receipt" >&2
+            exit 65
+        }
+        receipt_repository=$(require_value "$receipt" repository)
+        receipt_pr=$(require_value "$receipt" pr)
+        receipt_status=$(require_value "$receipt" write_status)
+        [ "$receipt_repository" = "$selected_repository" ] &&
+        [ "$receipt_pr" = "$selected_pr" ] &&
+        [ "$receipt_status" = SUCCEEDED ] || continue
+        receipt_head=$(require_value "$receipt" expected_head)
+        is_head "$receipt_head" || {
+            printf 'cockswain: invalid successful action head in %s\n' "$receipt" >&2
+            exit 65
+        }
+        successful_head=$receipt_head
+    done
+}
+
+write_action_receipt() {
+    write_expected_head=$1
+    write_observed_head=$2
+    write_pre_action_state=$3
+    write_status=$4
+    write_outcome=$5
+    write_retryable=$6
+    write_error_class=$7
+    write_error_message=$8
+    write_exit_status=$9
+    write_stdout_file=${10}
+    write_stderr_file=${11}
+    sequence=$(next_sequence "$action_receipt_directory")
+    receipt=$action_receipt_directory/$sequence.tsv
+    temporary=$receipt.$$.tmp
+    now=$(timestamp)
+    {
+        printf 'schema\tcockswain-retirement-action-receipt-v1\n'
+        printf 'attempt_id\t%s\n' "$sequence"
+        printf 'attempted_at\t%s\n' "$now"
+        printf 'repository\t%s\n' "$selected_repository"
+        printf 'pr\t%s\n' "$selected_pr"
+        printf 'action\t%s\n' "$selected_next_action"
+        printf 'expected_head\t%s\n' "$write_expected_head"
+        printf 'observed_head\t%s\n' "$write_observed_head"
+        printf 'collection_scope\t%s\n' "$selected_scope"
+        printf 'collection_digest\t%s\n' "$selected_collection_digest"
+        printf 'queue_count\t%s\n' "$selected_queue_count"
+        printf 'queue_state\t%s\n' "$selected_queue_state"
+        printf 'authority_kind\t%s\n' "$authority_kind"
+        printf 'authority_receipt_ref\t%s\n' "$authority_receipt_ref"
+        printf 'pre_action_selector_state\t%s\n' "$selected_reason"
+        printf 'pre_action_selector_detail\t%s\n' "$selected_detail"
+        printf 'pre_action_state\t%s\n' "$write_pre_action_state"
+        printf 'write_status\t%s\n' "$write_status"
+        printf 'outcome\t%s\n' "$write_outcome"
+        printf 'retryable\t%s\n' "$write_retryable"
+        printf 'error_class\t%s\n' "$write_error_class"
+        printf 'error_message\t%s\n' "$write_error_message"
+        printf 'executor_exit_status\t%s\n' "$write_exit_status"
+        printf 'executor_stdout_sha256\t%s\n' "$(digest "$write_stdout_file")"
+        printf 'executor_stderr_sha256\t%s\n' "$(digest "$write_stderr_file")"
+    } > "$temporary"
+    mv "$temporary" "$receipt"
+    last_action_receipt=$receipt
+}
+
+parse_action_result() {
+    result_file=$1
+    validate_key_value_file "$result_file" || return 1
+    result_schema=$(read_value "$result_file" schema) || return 1
+    result_status=$(read_value "$result_file" status) || return 1
+    result_repository=$(read_value "$result_file" repository) || return 1
+    result_pr=$(read_value "$result_file" pr) || return 1
+    result_expected_head=$(read_value "$result_file" expected_head) || return 1
+    result_observed_head=$(read_value "$result_file" observed_head) || return 1
+    result_action=$(read_value "$result_file" action) || return 1
+    result_pre_action_state=$(read_value "$result_file" pre_action_state) || return 1
+    result_outcome=$(read_value "$result_file" result) || return 1
+    result_retryable=$(read_value "$result_file" retryable) || return 1
+    result_error_class=$(read_value "$result_file" error_class) || return 1
+    result_error_message=$(read_value "$result_file" error_message) || return 1
+
+    [ "$result_schema" = cockswain-retirement-action-result-v1 ] &&
+    [ "$result_repository" = "$selected_repository" ] &&
+    [ "$result_pr" = "$selected_pr" ] &&
+    [ "$result_expected_head" = "$selected_head" ] &&
+    [ "$result_action" = "$selected_next_action" ] &&
+    { [ "$result_observed_head" = - ] || is_head "$result_observed_head"; } &&
+    { [ "$result_status" = SUCCEEDED ] || [ "$result_status" = FAILED ]; } &&
+    { [ "$result_retryable" = yes ] || [ "$result_retryable" = no ]; } &&
+    is_token "$result_error_class" &&
+    [ -n "$result_error_message" ] || return 1
+
+    if [ "$result_status" = SUCCEEDED ]; then
+        [ "$result_observed_head" = "$selected_head" ] &&
+        [ "$result_pre_action_state" = READY ] &&
+        [ "$result_retryable" = no ] &&
+        [ "$result_error_class" = - ] &&
+        [ "$result_error_message" = - ] || return 1
+        case "$selected_next_action:$result_outcome" in
+            merge:MERGED|close:CLOSED) ;;
+            *) return 1 ;;
+        esac
+    else
+        [ "$result_outcome" = NOT_APPLIED ] || return 1
+    fi
+}
+
+write_stale_retry_receipt() {
+    old_head=$1
+    stdout_file=$2
+    stderr_file=$3
+    write_action_receipt "$old_head" "$selected_head" STALE REFUSED NOT_APPLIED no \
+        HEAD_CHANGED_BEFORE_RETRY 'head-changed-before-retry' 0 "$stdout_file" "$stderr_file"
+}
+
+while :; do
+    if [ "$actions_attempted" -ge "$action_limit" ]; then
+        emit_result BLOCKED RETIREMENT_ACTION_LIMIT_REACHED
+        exit 0
+    fi
+
+    collection_sequence=$(next_collection_sequence)
+    collection=$collection_directory/$collection_sequence
+    mkdir -p "$collection"
+    collect_stdout=$work/collect-$collection_sequence.out
+    collect_stderr=$work/collect-$collection_sequence.err
+    collect_status=0
+    "$collect_command" "$collection" > "$collect_stdout" 2> "$collect_stderr" || collect_status=$?
+    collections_observed=$((collections_observed + 1))
+    if [ "$collect_status" -ne 0 ]; then
+        write_collection_failure "$collection_sequence" "$collection" COLLECTOR_FAILED "$collect_status" "$collect_stdout" "$collect_stderr"
+        emit_result BLOCKED RETIREMENT_COLLECTION_FAILED
+        exit 0
+    fi
+
+    decision=$work/decision-$collection_sequence.tsv
+    selector_stderr=$work/selector-$collection_sequence.err
+    selector_status=0
+    "$selector" "$collection" > "$decision" 2> "$selector_stderr" || selector_status=$?
+    if [ "$selector_status" -ne 0 ] || ! load_selected_decision "$decision" "$collection"; then
+        write_collection_failure "$collection_sequence" "$collection" SELECTOR_OR_COLLECTION_INVALID "$selector_status" "$decision" "$selector_stderr"
+        emit_result BLOCKED RETIREMENT_COLLECTION_INVALID
+        exit 0
+    fi
+    record_collection "$collection_sequence" "$collection" "$decision"
+
+    if [ "$selected_action" = DONE ]; then
+        emit_result DONE "$selected_reason"
+        exit 0
+    fi
+
+    if [ "$selected_action" != CONTINUE ] || [ "$selected_reason" != READY ] ||
+       { [ "$selected_next_action" != merge ] && [ "$selected_next_action" != close ]; }; then
+        emit_result "$selected_action" "$selected_reason"
+        exit 0
+    fi
+
+    is_pr_number "$selected_pr" && is_head "$selected_head" || {
+        emit_result BLOCKED RETIREMENT_SELECTOR_INVALID_IDENTITY
+        exit 0
+    }
+
+    if ! load_authority_observation "$collection"; then
+        empty=$work/empty-authority-$collection_sequence
+        : > "$empty"
+        authority_kind=unknown
+        authority_receipt_ref=unknown
+        write_action_receipt "$selected_head" - UNKNOWN REFUSED NOT_APPLIED no \
+            AUTHORIZATION_OBSERVATION_INVALID 'missing-or-invalid-authority-observation' 0 "$empty" "$empty"
+        emit_result BLOCKED RETIREMENT_AUTHORIZATION_INVALID
+        exit 0
+    fi
+
+    if [ "$apply" != yes ]; then
+        emit_result READY RETIREMENT_ACTION_PLANNED
+        exit 0
+    fi
+
+    previous_successful_action
+    if [ "$successful_head" = "$selected_head" ]; then
+        empty=$work/empty-post-action-$collection_sequence
+        : > "$empty"
+        write_action_receipt "$selected_head" "$selected_head" UNKNOWN REFUSED NOT_APPLIED no \
+            POST_ACTION_RECOLLECTION_FAILED 'previous-successful-retirement-remains-open' 0 "$empty" "$empty"
+        emit_result BLOCKED RETIREMENT_ACTION_UNCONFIRMED
+        exit 0
+    fi
+
+    previous_failed_action
+    if [ "$failed_head" != - ] && [ "$failed_head" != "$selected_head" ]; then
+        empty=$work/empty-stale-$collection_sequence
+        : > "$empty"
+        write_stale_retry_receipt "$failed_head" "$empty" "$empty"
+        emit_result BLOCKED RETIREMENT_ACTION_STALE
+        exit 0
+    fi
+    if [ "$failed_head" = "$selected_head" ] && [ "$failed_retryable" != yes ]; then
+        emit_result BLOCKED RETIREMENT_ACTION_FAILED
+        exit 0
+    fi
+    max_failed_attempts=$((retry_limit + 1))
+    if [ "$failed_head" = "$selected_head" ] && [ "$failed_count" -ge "$max_failed_attempts" ]; then
+        emit_result BLOCKED RETIREMENT_ACTION_RETRY_EXHAUSTED
+        exit 0
+    fi
+
+    request=$work/request-$collection_sequence.tsv
+    {
+        printf 'schema\tcockswain-retirement-action-request-v1\n'
+        printf 'repository\t%s\n' "$selected_repository"
+        printf 'pr\t%s\n' "$selected_pr"
+        printf 'expected_head\t%s\n' "$selected_head"
+        printf 'action\t%s\n' "$selected_next_action"
+        printf 'collection_scope\t%s\n' "$selected_scope"
+        printf 'collection_digest\t%s\n' "$selected_collection_digest"
+        printf 'queue_count\t%s\n' "$selected_queue_count"
+        printf 'queue_state\t%s\n' "$selected_queue_state"
+        printf 'authority_kind\t%s\n' "$authority_kind"
+        printf 'authority_receipt_ref\t%s\n' "$authority_receipt_ref"
+    } > "$request"
+
+    action_stdout=$work/action-$collection_sequence.out
+    action_stderr=$work/action-$collection_sequence.err
+    action_status=0
+    "$action_command" "$request" > "$action_stdout" 2> "$action_stderr" || action_status=$?
+    actions_attempted=$((actions_attempted + 1))
+
+    if ! parse_action_result "$action_stdout"; then
+        write_action_receipt "$selected_head" - UNKNOWN FAILED NOT_APPLIED no \
+            EXECUTOR_PROTOCOL_FAILURE 'executor-did-not-return-a-valid-action-result' "$action_status" "$action_stdout" "$action_stderr"
+        emit_result BLOCKED RETIREMENT_ACTION_FAILED
+        exit 0
+    fi
+    if [ "$result_status" = SUCCEEDED ] && [ "$action_status" -eq 0 ]; then
+        write_action_receipt "$selected_head" "$result_observed_head" "$result_pre_action_state" \
+            SUCCEEDED "$result_outcome" no - - "$action_status" "$action_stdout" "$action_stderr"
+        continue
+    fi
+    if [ "$result_status" = SUCCEEDED ]; then
+        write_action_receipt "$selected_head" "$result_observed_head" "$result_pre_action_state" \
+            FAILED NOT_APPLIED no EXECUTOR_PROTOCOL_FAILURE 'successful-result-with-failing-exit-status' "$action_status" "$action_stdout" "$action_stderr"
+        emit_result BLOCKED RETIREMENT_ACTION_FAILED
+        exit 0
+    fi
+
+    write_action_receipt "$selected_head" "$result_observed_head" "$result_pre_action_state" \
+        FAILED NOT_APPLIED "$result_retryable" "$result_error_class" "$result_error_message" \
+        "$action_status" "$action_stdout" "$action_stderr"
+    if [ "$result_retryable" = yes ]; then
+        continue
+    fi
+    emit_result BLOCKED RETIREMENT_ACTION_FAILED
+    exit 0
+done

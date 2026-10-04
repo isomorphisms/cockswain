@@ -92,6 +92,36 @@ and upstream contributions. Other authors and inaccessible repositories remain
 outside the scope. The older owner-only scope is rejected because it can omit
 unfinished work. The record does not establish live freshness or grant merge authority.
 
+`bin/cockswain-retirement-loop [--apply] RUN_DIRECTORY` is the surrounding
+execution loop. It preserves the selector's one-action contract: it collects a
+complete account state, records the observed count and queue threshold, selects
+one action, executes one authorized `merge` or `close`, then recollects before
+asking the selector again. Set `COCKSWAIN_RETIREMENT_COLLECT_CMD` to an
+executable that accepts one output-directory argument and writes the current
+ai-ci account collection. `--apply` also requires
+`COCKSWAIN_RETIREMENT_ACTION_CMD`, an executable that accepts one request TSV,
+rechecks the exact head and authority immediately before mutation, and writes a
+strict `cockswain-retirement-action-result-v1` result to stdout. The controller
+records only digest-bound command output, not credentials or raw command logs.
+
+Each complete collection receives a durable receipt under
+`RUN_DIRECTORY/collection-receipts/`: timestamp, collection scope/digest, open
+PR count, `NORMAL`/`WARNING`/`OVER_BUDGET` queue state, threshold transition,
+and the time the queue first went over 100 in the current run history. 90+ is a
+warning; 100+ is a hard queue-budget violation. At that point exact-head READY
+retirements still outrank ordinary work, while active, physical, experimental,
+and externally blocked PRs remain open.
+
+Every mutation attempt receives a separate durable action receipt under
+`RUN_DIRECTORY/actions/`, including expected and observed heads, authority
+receipt reference, pre-action state, response/error class, command-output
+digests, and retryability. A retryable write failure triggers a fresh complete
+collection and selector pass. A moved head yields
+`HEAD_CHANGED_BEFORE_RETRY` and stops instead of replaying the old mutation.
+After the bounded retry budget is exhausted, the loop returns the explicit
+`RETIREMENT_ACTION_FAILED` or `RETIREMENT_ACTION_RETRY_EXHAUSTED` state rather
+than quietly returning the PR to a generic READY pool.
+
 Draft routing follows the declared promotion action: `mark-ready` continues,
 `wait`/`hold-draft` waits, and an unrecognized owner decision escalates. A green
 draft therefore does not remain stuck after its promotion condition is met,

@@ -62,6 +62,8 @@ complete_account ready_first
 assert_field "$work/ready_first.out" action CONTINUE
 assert_field "$work/ready_first.out" reason_code READY
 assert_field "$work/ready_first.out" next_action merge
+assert_field "$work/ready_first.out" queue_count 2
+assert_field "$work/ready_first.out" queue_state NORMAL
 
 make_account physical
 make_snapshot physical isomorphisms/physical 8 BLOCKED \
@@ -134,5 +136,45 @@ complete_account former_schema
 sed 's/aici-account-collection-v2/aici-account-collection-v1/' "$work/former_schema/collection.tsv" > "$work/former.tsv"
 cp "$work/former.tsv" "$work/former_schema/collection.tsv"
 reject_account former_schema
+
+# Queue pressure is a controller input, not the old v1 display cap.  99 is a
+# warning, while 100 and 101 are over budget.  At 101 an exact-head READY merge
+# still outranks the unregistered work that remains visible in the collection.
+make_account queue_99
+number=1
+while [ "$number" -le 99 ]; do
+    printf 'isomorphisms/unmanaged\t%s\tOpen work\tno-retirement-policy\n' "$number" >> "$work/queue_99/unmanaged.tsv"
+    number=$((number + 1))
+done
+complete_account queue_99
+"$consumer" "$work/queue_99" > "$work/queue_99.out"
+assert_field "$work/queue_99.out" queue_count 99
+assert_field "$work/queue_99.out" queue_state WARNING
+
+make_account queue_100
+number=1
+while [ "$number" -le 100 ]; do
+    printf 'isomorphisms/unmanaged\t%s\tOpen work\tno-retirement-policy\n' "$number" >> "$work/queue_100/unmanaged.tsv"
+    number=$((number + 1))
+done
+complete_account queue_100
+"$consumer" "$work/queue_100" > "$work/queue_100.out"
+assert_field "$work/queue_100.out" queue_count 100
+assert_field "$work/queue_100.out" queue_state OVER_BUDGET
+
+make_account queue_101
+make_snapshot queue_101 isomorphisms/ready 1 READY \
+  "READY\tREADY\tpr\tisomorphisms/ready#1\t$H\tmerge\tall-required-conditions-satisfied"
+number=1
+while [ "$number" -le 100 ]; do
+    printf 'isomorphisms/unmanaged\t%s\tOpen work\tno-retirement-policy\n' "$number" >> "$work/queue_101/unmanaged.tsv"
+    number=$((number + 1))
+done
+complete_account queue_101
+"$consumer" "$work/queue_101" > "$work/queue_101.out"
+assert_field "$work/queue_101.out" queue_count 101
+assert_field "$work/queue_101.out" queue_state OVER_BUDGET
+assert_field "$work/queue_101.out" reason_code READY
+assert_field "$work/queue_101.out" next_action merge
 
 printf '%s\n' 'PASS: PR retirement keeps open work in the supervisory loop'
