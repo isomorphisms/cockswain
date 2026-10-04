@@ -39,6 +39,19 @@ expected=$(awk -F '\t' '
     exit 65
 }
 
+# The collection is the authoritative count for this pass.  The selector still
+# chooses exactly one action; the controller records this state and loops after
+# each mutation.  Do not truncate or merely display this budget signal.
+collection_digest=$(sha256sum "$collection")
+collection_digest=${collection_digest%% *}
+if [ "$expected" -ge 100 ]; then
+    queue_state=OVER_BUDGET
+elif [ "$expected" -ge 90 ]; then
+    queue_state=WARNING
+else
+    queue_state=NORMAL
+fi
+
 [ -f "$results" ] || {
     printf 'cockswain: managed retirement results not found: %s\n' "$results" >&2
     exit 66
@@ -142,6 +155,10 @@ if [ ! -s "$candidates" ]; then
         'next_action\t-' \
         'detail\tno-open-prs-in-collected-scope' |
         awk '{gsub(/\\t/,"\t"); print}'
+    printf 'collection_scope\towner-authored-visible-repositories\n'
+    printf 'collection_digest\t%s\n' "$collection_digest"
+    printf 'queue_count\t%s\n' "$expected"
+    printf 'queue_state\t%s\n' "$queue_state"
     exit 0
 fi
 
@@ -162,3 +179,7 @@ printf 'pr\t%s\n' "$pr"
 printf 'head\t%s\n' "$head"
 printf 'next_action\t%s\n' "$next_action"
 printf 'detail\t%s\n' "$detail"
+printf 'collection_scope\towner-authored-visible-repositories\n'
+printf 'collection_digest\t%s\n' "$collection_digest"
+printf 'queue_count\t%s\n' "$expected"
+printf 'queue_state\t%s\n' "$queue_state"
